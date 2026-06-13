@@ -58,13 +58,15 @@ jobs:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
 
-      # タグ(例: v1.0)をそのままファイル名用に、先頭 v を除いた値を versionName 用に取り出す
+      # タグ(例: v1.0)をそのままファイル名用に、先頭 v を除いた値を versionName 用に取り出す。
+      # 生のイベント値はシェルへ直接展開せず env 経由で受け、以降は steps.ver.outputs.* を使う。
       - name: Resolve version
         id: ver
+        env:
+          TAG_NAME: ${{ github.event.release.tag_name }}
         run: |
-          TAG="${{ github.event.release.tag_name }}"
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "name=${TAG#v}" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG_NAME" >> "$GITHUB_OUTPUT"
+          echo "name=${TAG_NAME#v}" >> "$GITHUB_OUTPUT"
 
       - name: Build signed release APK
         env:
@@ -86,5 +88,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release upload "${{ github.event.release.tag_name }}" \
+          gh release upload "${{ steps.ver.outputs.tag }}" \
             "dist/povo-manager_${{ steps.ver.outputs.tag }}.apk" --clobber
