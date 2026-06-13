@@ -68,6 +68,15 @@ class LineStatusTest {
     }
 
     @Test
+    fun `期限当日はデフォルト設定で通知される`() {
+        val status = LineWithPurchases(line, listOf(purchase(today.minusDays(180))))
+            .toStatus(settings, today)
+        assertEquals(0L, status.daysRemaining)
+        // DEFAULT_NOTIFY_DAYS に 0 を含むため、解約期限当日に通知される
+        assertTrue(shouldNotifyExpiry(status, settings))
+    }
+
+    @Test
     fun `期限超過は常に通知対象`() {
         val status = LineWithPurchases(line, listOf(purchase(today.minusDays(200))))
             .toStatus(settings, today)

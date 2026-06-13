@@ -57,4 +57,13 @@ class LineRepository @Inject constructor(
         )
         widgetUpdater.updateAll()
     }
+
+    /** インポート時のマージ(上書き)。既存データは保持し、電話番号一致で更新・それ以外は追加 */
+    suspend fun mergeImport(data: List<LineWithPurchases>) {
+        dao.mergeImport(
+            lines = data.map { it.line.copy(id = 0) },
+            purchasesByLineIndex = data.withIndex().associate { (index, item) -> index to item.purchases },
+        )
+        widgetUpdater.updateAll()
+    }
 }

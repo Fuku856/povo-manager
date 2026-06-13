@@ -18,6 +18,7 @@ class Converters {
     fun stringToIntSet(value: String?): Set<Int>? = when {
         value == null -> null
         value.isEmpty() -> emptySet()
-        else -> value.split(",").map { it.toInt() }.toSet()
+        // 不正・空白トークンが混入しても落ちないよう toIntOrNull で防御する
+        else -> value.split(",").mapNotNull { it.trim().toIntOrNull() }.toSet()
     }
 }

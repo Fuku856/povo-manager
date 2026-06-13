@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -44,11 +45,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.fuku856.povomanager.data.backup.ImportMode
 import com.fuku856.povomanager.data.settings.AppSettings
 import com.fuku856.povomanager.ui.lineedit.NotifyDayChips
 
@@ -162,13 +168,24 @@ fun SettingsScreen(
     pendingImportUri?.let { uri ->
         AlertDialog(
             onDismissRequest = { pendingImportUri = null },
-            title = { Text("データをインポート") },
-            text = { Text("現在の回線・購入履歴はすべて削除され、ファイルの内容に置き換えられます。よろしいですか?") },
+            title = { Text("インポート方法を選択") },
+            text = {
+                Text(
+                    "上書き: 既存の回線は残し、同じ電話番号は更新・新しい回線は追加します。\n" +
+                        "全置換: 現在の回線・購入履歴をすべて削除し、ファイルの内容に置き換えます。",
+                )
+            },
             confirmButton = {
-                TextButton(onClick = {
-                    viewModel.importFrom(uri)
-                    pendingImportUri = null
-                }) { Text("置き換える", color = MaterialTheme.colorScheme.error) }
+                Column(horizontalAlignment = Alignment.End) {
+                    TextButton(onClick = {
+                        viewModel.importFrom(uri, ImportMode.MERGE)
+                        pendingImportUri = null
+                    }) { Text("上書き") }
+                    TextButton(onClick = {
+                        viewModel.importFrom(uri, ImportMode.REPLACE)
+                        pendingImportUri = null
+                    }) { Text("全置換", color = MaterialTheme.colorScheme.error) }
+                }
             },
             dismissButton = {
                 TextButton(onClick = { pendingImportUri = null }) { Text("キャンセル") }
@@ -216,16 +233,35 @@ private fun NotifyHourSelector(hour: Int, onHourChange: (Int) -> Unit) {
 private fun ExpiryPeriodField(value: Int, onCommit: (Int) -> Unit) {
     var text by remember { mutableStateOf(value.toString()) }
     LaunchedEffect(value) { text = value.toString() }
+    val focusManager = LocalFocusManager.current
+
+    // 入力途中の中間値を保存しないよう、フォーカス喪失/Done時にのみ確定する
+    fun commit() {
+        val parsed = text.toIntOrNull()?.coerceIn(1, 3650)
+        if (parsed != null) {
+            if (parsed != value) onCommit(parsed)
+            text = parsed.toString()
+        } else {
+            text = value.toString() // 空など無効な入力は元に戻す
+        }
+    }
+
     OutlinedTextField(
         value = text,
-        onValueChange = { input ->
-            text = input.filter(Char::isDigit).take(4)
-            text.toIntOrNull()?.let { if (it in 1..3650) onCommit(it) }
-        },
+        onValueChange = { input -> text = input.filter(Char::isDigit).take(4) },
         label = { Text("解約までの日数") },
         supportingText = { Text("povoの規約変更があった場合に調整できます(通常は180)") },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Number,
+            imeAction = ImeAction.Done,
+        ),
+        keyboardActions = KeyboardActions(onDone = {
+            commit()
+            focusManager.clearFocus()
+        }),
         singleLine = true,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .onFocusChanged { if (!it.isFocused) commit() },
     )
 }

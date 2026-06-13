@@ -59,6 +59,11 @@ android {
     }
 }
 
+// Room のスキーマ履歴の出力先(exportSchema = true と対で必要)
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

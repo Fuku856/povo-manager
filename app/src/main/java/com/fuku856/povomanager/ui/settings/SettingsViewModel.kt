@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fuku856.povomanager.data.backup.BackupManager
+import com.fuku856.povomanager.data.backup.ImportMode
 import com.fuku856.povomanager.data.settings.AppSettings
 import com.fuku856.povomanager.data.settings.SettingsRepository
 import com.fuku856.povomanager.notifications.NotificationScheduler
@@ -37,10 +38,13 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun importFrom(uri: Uri) {
+    fun importFrom(uri: Uri, mode: ImportMode) {
         viewModelScope.launch {
-            runCatching { backupManager.importFrom(uri) }
-                .onSuccess { count -> _messages.send("${count}回線をインポートしました") }
+            runCatching { backupManager.importFrom(uri, mode) }
+                .onSuccess { count ->
+                    val verb = if (mode == ImportMode.REPLACE) "置き換えました" else "取り込みました"
+                    _messages.send("${count}回線を$verb")
+                }
                 .onFailure { _messages.send("インポートに失敗しました。ファイル形式を確認してください") }
         }
     }
@@ -62,7 +66,8 @@ class SettingsViewModel @Inject constructor(
     fun setNotifyHour(hour: Int) {
         viewModelScope.launch {
             settingsRepository.setNotifyHour(hour)
-            notificationScheduler.schedule(hour)
+            // 通知時刻の変更時は既存スケジュールを置き換える
+            notificationScheduler.schedule(hour, replace = true)
         }
     }
 

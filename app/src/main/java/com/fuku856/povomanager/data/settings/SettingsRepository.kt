@@ -25,7 +25,7 @@ data class AppSettings(
     val expiryPeriodDays: Int = DEFAULT_EXPIRY_PERIOD_DAYS,
 ) {
     companion object {
-        val DEFAULT_NOTIFY_DAYS = setOf(30, 14, 7, 3, 1)
+        val DEFAULT_NOTIFY_DAYS = setOf(30, 14, 7, 3, 1, 0)
         val DEFAULT_TOPPING_NOTIFY_DAYS = setOf(3, 1)
         const val DEFAULT_NOTIFY_HOUR = 9
         const val DEFAULT_EXPIRY_PERIOD_DAYS = 180

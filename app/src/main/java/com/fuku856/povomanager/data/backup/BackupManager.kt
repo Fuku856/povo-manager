@@ -15,9 +15,18 @@ import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/** インポート方法 */
+enum class ImportMode {
+    /** 既存データをすべて削除してファイルの内容に置き換える */
+    REPLACE,
+
+    /** 既存データを保持し、電話番号一致で上書き・それ以外は追加する */
+    MERGE,
+}
+
 @Serializable
 data class BackupData(
-    val version: Int = 1,
+    val version: Int = BackupManager.CURRENT_VERSION,
     val exportedAt: String,
     val lines: List<BackupLine>,
 )
@@ -49,6 +58,11 @@ class BackupManager @Inject constructor(
         ignoreUnknownKeys = true
     }
 
+    companion object {
+        /** 現在のバックアップ形式バージョン。これより新しいファイルは取り込まない */
+        const val CURRENT_VERSION = 1
+    }
+
     /** 全データをJSONとして書き出す。返り値は回線数 */
     suspend fun exportTo(uri: Uri): Int = withContext(Dispatchers.IO) {
         val data = repository.getLinesWithPurchases()
@@ -62,13 +76,26 @@ class BackupManager @Inject constructor(
         backup.lines.size
     }
 
-    /** JSONを読み込み、既存データをすべて置き換える。返り値は回線数 */
-    suspend fun importFrom(uri: Uri): Int = withContext(Dispatchers.IO) {
+    /**
+     * JSONを読み込み、指定モードでインポートする。返り値は取り込んだ回線数。
+     * @param mode REPLACE=全置換 / MERGE=上書き(既存保持)
+     */
+    suspend fun importFrom(uri: Uri, mode: ImportMode): Int = withContext(Dispatchers.IO) {
         val text = context.contentResolver.openInputStream(uri)?.use { stream ->
             stream.readBytes().toString(Charsets.UTF_8)
         } ?: error("ファイルを開けませんでした")
         val backup = json.decodeFromString(BackupData.serializer(), text)
-        repository.replaceAll(backup.lines.map { it.toEntity() })
+        // 未対応の新しい形式を黙って取り込まない
+        require(backup.version <= CURRENT_VERSION) {
+            "対応していないバックアップ形式です(version=${backup.version})"
+        }
+        // 日付パースは replaceAll/mergeImport の前に行われるため、不正な日付があれば
+        // DB を変更せずにここで例外となる(既存データは破壊されない)
+        val entities = backup.lines.map { it.toEntity() }
+        when (mode) {
+            ImportMode.REPLACE -> repository.replaceAll(entities)
+            ImportMode.MERGE -> repository.mergeImport(entities)
+        }
         backup.lines.size
     }
 

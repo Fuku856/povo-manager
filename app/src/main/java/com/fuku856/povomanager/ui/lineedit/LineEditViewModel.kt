@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import javax.inject.Inject
@@ -47,45 +48,77 @@ class LineEditViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(LineEditUiState(isNew = lineId == -1L))
     val uiState: StateFlow<LineEditUiState> = _uiState.asStateFlow()
 
+    private val handle = savedStateHandle
+
     init {
         viewModelScope.launch {
             val settings = settingsRepository.current()
             val line = if (lineId != -1L) repository.getLine(lineId) else null
             existingLine = line
-            _uiState.update {
-                it.copy(
-                    loaded = true,
-                    defaultNotifyDays = settings.defaultNotifyDays,
-                    phoneNumber = line?.phoneNumber ?: "",
-                    name = line?.name ?: "",
-                    memo = line?.memo ?: "",
-                    overrideEnabled = line?.notifyDaysOverride != null,
-                    overrideDays = line?.notifyDaysOverride ?: settings.defaultNotifyDays,
-                )
+            if (handle.get<Boolean>(KEY_DRAFT) == true) {
+                // プロセス再生成: 入力中の下書きを復元する(DB値で上書きしない)
+                _uiState.update {
+                    it.copy(
+                        loaded = true,
+                        defaultNotifyDays = settings.defaultNotifyDays,
+                        phoneNumber = handle[KEY_PHONE] ?: "",
+                        name = handle[KEY_NAME] ?: "",
+                        memo = handle[KEY_MEMO] ?: "",
+                        overrideEnabled = handle[KEY_OVERRIDE_ENABLED] ?: false,
+                        overrideDays = (handle.get<IntArray>(KEY_OVERRIDE_DAYS) ?: IntArray(0)).toSet(),
+                        recordInitialPurchase = handle[KEY_RECORD_INITIAL] ?: true,
+                        initialPurchaseDate = handle.get<Long>(KEY_INITIAL_DATE)
+                            ?.let(LocalDate::ofEpochDay) ?: LocalDate.now(),
+                    )
+                }
+            } else {
+                _uiState.update {
+                    it.copy(
+                        loaded = true,
+                        defaultNotifyDays = settings.defaultNotifyDays,
+                        phoneNumber = line?.phoneNumber ?: "",
+                        name = line?.name ?: "",
+                        memo = line?.memo ?: "",
+                        overrideEnabled = line?.notifyDaysOverride != null,
+                        overrideDays = line?.notifyDaysOverride ?: settings.defaultNotifyDays,
+                    )
+                }
             }
         }
     }
 
-    fun onPhoneChange(value: String) {
-        _uiState.update { it.copy(phoneNumber = value.filter(Char::isDigit).take(11), phoneError = null) }
+    /** _uiState を更新し、入力中の下書きを SavedStateHandle に保存する */
+    private inline fun updateDraft(block: (LineEditUiState) -> LineEditUiState) {
+        val newState = _uiState.updateAndGet(block)
+        handle[KEY_DRAFT] = true
+        handle[KEY_PHONE] = newState.phoneNumber
+        handle[KEY_NAME] = newState.name
+        handle[KEY_MEMO] = newState.memo
+        handle[KEY_OVERRIDE_ENABLED] = newState.overrideEnabled
+        handle[KEY_OVERRIDE_DAYS] = newState.overrideDays.toIntArray()
+        handle[KEY_RECORD_INITIAL] = newState.recordInitialPurchase
+        handle[KEY_INITIAL_DATE] = newState.initialPurchaseDate.toEpochDay()
     }
 
-    fun onNameChange(value: String) = _uiState.update { it.copy(name = value) }
+    fun onPhoneChange(value: String) =
+        updateDraft { it.copy(phoneNumber = value.filter(Char::isDigit).take(11), phoneError = null) }
 
-    fun onMemoChange(value: String) = _uiState.update { it.copy(memo = value) }
+    fun onNameChange(value: String) = updateDraft { it.copy(name = value) }
 
-    fun onOverrideEnabledChange(enabled: Boolean) = _uiState.update { it.copy(overrideEnabled = enabled) }
+    fun onMemoChange(value: String) = updateDraft { it.copy(memo = value) }
 
-    fun onOverrideDayToggle(day: Int) = _uiState.update {
+    fun onOverrideEnabledChange(enabled: Boolean) = updateDraft { it.copy(overrideEnabled = enabled) }
+
+    fun onOverrideDayToggle(day: Int) = updateDraft {
         val days = if (day in it.overrideDays) it.overrideDays - day else it.overrideDays + day
         it.copy(overrideDays = days)
     }
 
     fun onRecordInitialPurchaseChange(enabled: Boolean) =
-        _uiState.update { it.copy(recordInitialPurchase = enabled) }
+        updateDraft { it.copy(recordInitialPurchase = enabled) }
 
     fun onInitialPurchaseDateChange(date: LocalDate) =
-        _uiState.update { it.copy(initialPurchaseDate = date) }
+        updateDraft { it.copy(initialPurchaseDate = date) }
 
     fun save(onSaved: () -> Unit) {
         val state = _uiState.value
@@ -115,6 +148,7 @@ class LineEditViewModel @Inject constructor(
             } else {
                 repository.updateLine(line)
             }
+            handle[KEY_DRAFT] = false // 保存完了後は下書きを破棄
             onSaved()
         }
     }
@@ -123,7 +157,19 @@ class LineEditViewModel @Inject constructor(
         val line = existingLine ?: return
         viewModelScope.launch {
             repository.deleteLine(line)
+            handle[KEY_DRAFT] = false
             onDeleted()
         }
+    }
+
+    private companion object {
+        const val KEY_DRAFT = "draft_active"
+        const val KEY_PHONE = "draft_phone"
+        const val KEY_NAME = "draft_name"
+        const val KEY_MEMO = "draft_memo"
+        const val KEY_OVERRIDE_ENABLED = "draft_override_enabled"
+        const val KEY_OVERRIDE_DAYS = "draft_override_days"
+        const val KEY_RECORD_INITIAL = "draft_record_initial"
+        const val KEY_INITIAL_DATE = "draft_initial_date"
     }
 }
