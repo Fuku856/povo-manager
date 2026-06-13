@@ -9,4 +9,4 @@
 }
 
 # DataStore Preferences: protobuf 内部フィールド strings_ が R8 に削除されるのを防ぐ
--keep class androidx.datastore.preferences.protobuf.** { *; }
+-keepclassmembers class androidx.datastore.preferences.protobuf.** { *** strings_; }
