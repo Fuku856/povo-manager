@@ -1,0 +1,92 @@
+name: Build Release APK
+
+# GitHub 上で手動でリリースを公開(publish)したときに発火する
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write # リリースアセットのアップロードに必要
+
+jobs:
+  # 本文が空のリリースなら、コミット/PR から変更履歴(Changelog)を自動生成して埋める
+  release-notes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fill release notes if empty
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BODY: ${{ github.event.release.body }}
+          TAG: ${{ github.event.release.tag_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          # 空白のみも「空」とみなす。本文があれば手書きを尊重してスキップ。
+          if [ -n "${BODY//[[:space:]]/}" ]; then
+            echo "本文が入力済みのため自動生成をスキップします。"
+            exit 0
+          fi
+          notes=$(gh api -X POST "repos/$REPO/releases/generate-notes" \
+            -f tag_name="$TAG" --jq '.body')
+          printf '%s' "$notes" > notes.md
+          gh release edit "$TAG" --notes-file notes.md
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      # gradle.properties の org.gradle.java.home はローカル(Windows)固定パスのため
+      # CI ランナーには存在しない。削除して setup-java の JDK を使わせる。
+      - name: Remove local org.gradle.java.home
+        run: sed -i '/org.gradle.java.home/d' gradle.properties
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Decode keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+
+      # タグ(例: v1.0)をそのままファイル名用に、先頭 v を除いた値を versionName 用に取り出す。
+      # 生のイベント値はシェルへ直接展開せず env 経由で受け、以降は steps.ver.outputs.* を使う。
+      - name: Resolve version
+        id: ver
+        env:
+          TAG_NAME: ${{ github.event.release.tag_name }}
+        run: |
+          echo "tag=$TAG_NAME" >> "$GITHUB_OUTPUT"
+          echo "name=${TAG_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Build signed release APK
+        env:
+          KEYSTORE_FILE: ${{ runner.temp }}/release.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          VERSION_NAME: ${{ steps.ver.outputs.name }}
+          VERSION_CODE: ${{ github.run_number }}
+        run: ./gradlew assembleRelease
+
+      - name: Rename APK
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/release/app-release.apk \
+            "dist/povo-manager_${{ steps.ver.outputs.tag }}.apk"
+
+      - name: Upload APK to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ steps.ver.outputs.tag }}" \
+            "dist/povo-manager_${{ steps.ver.outputs.tag }}.apk" --clobber
