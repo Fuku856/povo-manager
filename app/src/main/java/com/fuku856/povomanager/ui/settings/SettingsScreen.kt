@@ -237,9 +237,13 @@ private fun ImportPreviewDialog(
                 Spacer(Modifier.height(12.dp))
                 if (preview.lines.isEmpty()) {
                     Text(
-                        "ファイルに回線が含まれていません。",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        if (isReplace) {
+                            "⚠ ファイルに回線が含まれていません。このまま実行すると既存の回線がすべて削除されます。"
+                        } else {
+                            "⚠ ファイルに回線が含まれていません。取り込まれる回線はありません。"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
                     )
                 } else {
                     LazyColumn(
