@@ -19,16 +19,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -36,12 +33,15 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.size
@@ -129,9 +129,10 @@ fun SettingsScreen(
                 )
             }
 
-            NotifyHourSelector(
+            NotifyTimeSelector(
                 hour = settings.notifyHour,
-                onHourChange = viewModel::setNotifyHour,
+                minute = settings.notifyMinute,
+                onTimeChange = viewModel::setNotifyTime,
             )
 
             HorizontalDivider()
@@ -203,31 +204,46 @@ fun SectionTitle(text: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun NotifyHourSelector(hour: Int, onHourChange: (Int) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
+private fun NotifyTimeSelector(hour: Int, minute: Int, onTimeChange: (Int, Int) -> Unit) {
+    var showDialog by rememberSaveable { mutableStateOf(false) }
     Column {
         Text("通知時刻", style = MaterialTheme.typography.bodyLarge)
         Spacer(Modifier.height(8.dp))
-        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-            OutlinedTextField(
-                value = "%d:00".format(hour),
-                onValueChange = {},
-                readOnly = true,
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
-            )
-            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                (0..23).forEach { h ->
-                    DropdownMenuItem(
-                        text = { Text("%d:00".format(h)) },
-                        onClick = {
-                            onHourChange(h)
-                            expanded = false
-                        },
-                    )
-                }
-            }
+        OutlinedButton(onClick = { showDialog = true }) {
+            Icon(Icons.Default.Schedule, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("%02d:%02d".format(hour, minute))
         }
+    }
+
+    if (showDialog) {
+        val timePickerState = rememberTimePickerState(
+            initialHour = hour,
+            initialMinute = minute,
+            is24Hour = true,
+        )
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    onTimeChange(timePickerState.hour, timePickerState.minute)
+                    showDialog = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDialog = false }) { Text("キャンセル") }
+            },
+            title = { Text("通知時刻") },
+            text = {
+                // ダイアログ内で中央寄せして時計を表示する
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    TimePicker(state = timePickerState)
+                }
+            },
+        )
     }
 }
 

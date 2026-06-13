@@ -30,7 +30,8 @@ class PovoManagerApp : Application(), Configuration.Provider {
         super.onCreate()
         notificationHelper.ensureChannels()
         appScope.launch {
-            notificationScheduler.schedule(settingsRepository.current().notifyHour)
+            val settings = settingsRepository.current()
+            notificationScheduler.schedule(settings.notifyHour, settings.notifyMinute)
         }
     }
 }
