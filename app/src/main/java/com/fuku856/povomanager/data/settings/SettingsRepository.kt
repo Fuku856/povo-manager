@@ -15,7 +15,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 data class AppSettings(
-    /** 解約期限の何日前に通知するか(共通デフォルト) */
+    /** 自動解約日の何日前に通知するか(共通デフォルト) */
     val defaultNotifyDays: Set<Int> = DEFAULT_NOTIFY_DAYS,
     /** トッピング有効期限の何日前に通知するか */
     val toppingExpiryNotifyDays: Set<Int> = DEFAULT_TOPPING_NOTIFY_DAYS,

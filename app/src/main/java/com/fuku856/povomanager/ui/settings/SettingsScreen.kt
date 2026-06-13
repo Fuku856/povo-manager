@@ -43,6 +43,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.Alignment
@@ -98,13 +99,14 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
+                .padding(16.dp)
+                .imePadding(),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             SectionTitle("通知")
 
             Column {
-                Text("解約期限の通知タイミング(共通設定)", style = MaterialTheme.typography.bodyLarge)
+                Text("自動解約日の通知タイミング(共通設定)", style = MaterialTheme.typography.bodyLarge)
                 Text(
                     "回線ごとの個別設定がある場合はそちらが優先されます",
                     style = MaterialTheme.typography.bodySmall,

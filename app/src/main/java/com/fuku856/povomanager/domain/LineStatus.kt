@@ -13,9 +13,9 @@ data class LineStatus(
     val purchases: List<ToppingPurchase>,
     /** 最終トッピング購入日。履歴がない場合はnull */
     val lastPurchaseDate: LocalDate?,
-    /** 解約期限日(最終購入日 + 期限日数)。履歴がない場合はnull */
+    /** 自動解約日(最終購入日 + 期限日数)。履歴がない場合はnull */
     val expiryDate: LocalDate?,
-    /** 解約期限までの残日数。期限日当日=0、超過は負値 */
+    /** 自動解約日までの残日数。期限日当日=0、超過は負値 */
     val daysRemaining: Long?,
     /** 有効期間中のトッピングのうち期限が最も近いもの */
     val activeTopping: ToppingPurchase?,
@@ -44,7 +44,7 @@ fun activeTopping(purchases: List<ToppingPurchase>, today: LocalDate): ToppingPu
 fun effectiveNotifyDays(line: PovoLine, settings: AppSettings): Set<Int> =
     line.notifyDaysOverride ?: settings.defaultNotifyDays
 
-/** 解約期限通知を今日発行すべきか */
+/** 自動解約日の通知を今日発行すべきか */
 fun shouldNotifyExpiry(status: LineStatus, settings: AppSettings): Boolean {
     val remaining = status.daysRemaining ?: return false
     if (remaining < 0) return true // 期限超過は毎日警告

@@ -179,7 +179,7 @@ fun LineDetailScreen(
 
     editingPurchase?.let { purchase ->
         PurchaseSheet(
-            title = "購入履歴を修正",
+            title = "購入履歴を編集",
             initialDate = purchase.purchaseDate,
             initialName = purchase.toppingName,
             initialValidityEnd = purchase.validityEndDate,
@@ -224,7 +224,7 @@ private fun StatusCard(status: LineStatus) {
                         Text(status.lastPurchaseDate?.toDisplayString() ?: "-", style = MaterialTheme.typography.bodyLarge)
                     }
                     Column {
-                        Text("解約期限", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("自動解約日", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(status.expiryDate.toDisplayString(), style = MaterialTheme.typography.bodyLarge)
                     }
                 }
@@ -266,7 +266,7 @@ private fun PurchaseRow(
                 Icon(Icons.Default.MoreVert, contentDescription = "メニュー")
             }
             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                DropdownMenuItem(text = { Text("修正") }, onClick = { menuOpen = false; onEdit() })
+                DropdownMenuItem(text = { Text("編集") }, onClick = { menuOpen = false; onEdit() })
                 DropdownMenuItem(
                     text = { Text("削除", color = MaterialTheme.colorScheme.error) },
                     onClick = { menuOpen = false; onDelete() },

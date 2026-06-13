@@ -45,7 +45,7 @@ class LineStatusTest {
     }
 
     @Test
-    fun `解約期限は最終購入日の180日後`() {
+    fun `自動解約日は最終購入日の180日後`() {
         val status = LineWithPurchases(line, listOf(purchase(LocalDate.of(2026, 1, 1))))
             .toStatus(settings, today)
         assertEquals(LocalDate.of(2026, 6, 30), status.expiryDate)
@@ -72,7 +72,7 @@ class LineStatusTest {
         val status = LineWithPurchases(line, listOf(purchase(today.minusDays(180))))
             .toStatus(settings, today)
         assertEquals(0L, status.daysRemaining)
-        // DEFAULT_NOTIFY_DAYS に 0 を含むため、解約期限当日に通知される
+        // DEFAULT_NOTIFY_DAYS に 0 を含むため、自動解約の当日に通知される
         assertTrue(shouldNotifyExpiry(status, settings))
     }
 
