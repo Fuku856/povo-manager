@@ -1,5 +1,6 @@
 package com.fuku856.povomanager.ui.settings
 
+import android.content.res.Configuration
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -33,6 +34,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimeInput
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberTimePickerState
@@ -49,6 +51,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -235,12 +238,22 @@ private fun NotifyTimeSelector(hour: Int, minute: Int, onTimeChange: (Int, Int) 
             },
             title = { Text("通知時刻") },
             text = {
-                // ダイアログ内で中央寄せして時計を表示する
+                // 横画面では時計ダイヤルが収まらずボタンが押せなくなるため、
+                // 縦画面はダイヤル(TimePicker)、横画面は数値入力(TimeInput)に切り替える。
+                // どちらでも高さが不足したときに見切れないよう縦スクロールを許可する。
+                val isPortrait = LocalConfiguration.current.orientation ==
+                    Configuration.ORIENTATION_PORTRAIT
                 Column(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    TimePicker(state = timePickerState)
+                    if (isPortrait) {
+                        TimePicker(state = timePickerState)
+                    } else {
+                        TimeInput(state = timePickerState)
+                    }
                 }
             },
         )
