@@ -21,7 +21,7 @@ jobs:
         run: |
           # 本文の有無に関わらず、毎回自動生成した変更履歴で上書きする。
           notes=$(gh api -X POST "repos/$REPO/releases/generate-notes" \
-            -f tag_name="$TAG" --jq '.body')
+            -f tag_name="$TAG" --jq '.body // empty')
           # API が空 body を返した場合(タグ間コミット 0 件など)はスキップ。
           # 空ファイルで gh release edit するとリリース本文が消えるため。
           [ -n "$notes" ] || { echo "generate-notes returned empty body; skipping."; exit 0; }
