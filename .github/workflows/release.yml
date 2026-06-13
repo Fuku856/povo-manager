@@ -9,26 +9,26 @@ permissions:
   contents: write # リリースアセットのアップロードに必要
 
 jobs:
-  # 本文が空のリリースなら、コミット/PR から変更履歴(Changelog)を自動生成して埋める
+  # コミット/PR から変更履歴(Changelog)を自動生成し、本文を常に上書きする
   release-notes:
     runs-on: ubuntu-latest
     steps:
-      - name: Fill release notes if empty
+      - name: Generate and overwrite release notes
         env:
           GH_TOKEN: ${{ github.token }}
-          BODY: ${{ github.event.release.body }}
           TAG: ${{ github.event.release.tag_name }}
           REPO: ${{ github.repository }}
         run: |
-          # 空白のみも「空」とみなす。本文があれば手書きを尊重してスキップ。
-          if [ -n "${BODY//[[:space:]]/}" ]; then
-            echo "本文が入力済みのため自動生成をスキップします。"
-            exit 0
-          fi
+          # 本文の有無に関わらず、毎回自動生成した変更履歴で上書きする。
           notes=$(gh api -X POST "repos/$REPO/releases/generate-notes" \
             -f tag_name="$TAG" --jq '.body')
+          # API が空 body を返した場合(タグ間コミット 0 件など)はスキップ。
+          # 空ファイルで gh release edit するとリリース本文が消えるため。
+          [ -n "$notes" ] || { echo "generate-notes returned empty body; skipping."; exit 0; }
           printf '%s' "$notes" > notes.md
-          gh release edit "$TAG" --notes-file notes.md
+          # このジョブは checkout していないため、--repo でリポジトリを明示する
+          # (省略すると gh が git からリポジトリを特定できず失敗する)
+          gh release edit "$TAG" --repo "$REPO" --notes-file notes.md
 
   build:
     runs-on: ubuntu-latest
