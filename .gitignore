@@ -1,0 +1,18 @@
+*.iml
+.gradle/
+.kotlin/
+local.properties
+.idea/
+.DS_Store
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+*.hprof
+*.apk
+*.aab
+output-metadata.json
+# 署名鍵は絶対にコミットしない(中身は base64 で GitHub Secret に登録する)
+*.keystore
+*.jks
+keystore.b64

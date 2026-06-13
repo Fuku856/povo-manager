@@ -1,0 +1,231 @@
+package com.fuku856.povomanager.ui.settings
+
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.FileUpload
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.fuku856.povomanager.data.settings.AppSettings
+import com.fuku856.povomanager.ui.lineedit.NotifyDayChips
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsScreen(
+    onBack: () -> Unit,
+    viewModel: SettingsViewModel = hiltViewModel(),
+) {
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+    var pendingImportUri by remember { mutableStateOf<Uri?>(null) }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri -> uri?.let(viewModel::exportTo) }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri -> uri?.let { pendingImportUri = it } }
+
+    LaunchedEffect(Unit) {
+        viewModel.messages.collect { snackbarHostState.showSnackbar(it) }
+    }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        topBar = {
+            TopAppBar(
+                title = { Text("設定") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
+                    }
+                },
+            )
+        },
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
+        ) {
+            SectionTitle("通知")
+
+            Column {
+                Text("解約期限の通知タイミング(共通設定)", style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    "回線ごとの個別設定がある場合はそちらが優先されます",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(8.dp))
+                NotifyDayChips(
+                    selected = settings.defaultNotifyDays,
+                    onToggle = viewModel::toggleNotifyDay,
+                )
+            }
+
+            Column {
+                Text("トッピング有効期限の通知タイミング", style = MaterialTheme.typography.bodyLarge)
+                Spacer(Modifier.height(8.dp))
+                NotifyDayChips(
+                    selected = settings.toppingExpiryNotifyDays,
+                    onToggle = viewModel::toggleToppingNotifyDay,
+                    choices = AppSettings.TOPPING_NOTIFY_DAY_CHOICES,
+                )
+            }
+
+            NotifyHourSelector(
+                hour = settings.notifyHour,
+                onHourChange = viewModel::setNotifyHour,
+            )
+
+            HorizontalDivider()
+            SectionTitle("詳細設定")
+
+            ExpiryPeriodField(
+                value = settings.expiryPeriodDays,
+                onCommit = viewModel::setExpiryPeriodDays,
+            )
+
+            HorizontalDivider()
+            SectionTitle("バックアップ")
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "全回線と購入履歴をJSONファイルに保存/復元できます。機種変更時のデータ移行にご利用ください。",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { exportLauncher.launch("povo-manager-backup.json") }) {
+                        Icon(Icons.Default.FileUpload, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("エクスポート")
+                    }
+                    OutlinedButton(onClick = { importLauncher.launch(arrayOf("application/json")) }) {
+                        Icon(Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("インポート")
+                    }
+                }
+            }
+        }
+    }
+
+    pendingImportUri?.let { uri ->
+        AlertDialog(
+            onDismissRequest = { pendingImportUri = null },
+            title = { Text("データをインポート") },
+            text = { Text("現在の回線・購入履歴はすべて削除され、ファイルの内容に置き換えられます。よろしいですか?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.importFrom(uri)
+                    pendingImportUri = null
+                }) { Text("置き換える", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingImportUri = null }) { Text("キャンセル") }
+            },
+        )
+    }
+}
+
+@Composable
+fun SectionTitle(text: String) {
+    Text(text, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun NotifyHourSelector(hour: Int, onHourChange: (Int) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Column {
+        Text("通知時刻", style = MaterialTheme.typography.bodyLarge)
+        Spacer(Modifier.height(8.dp))
+        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+            OutlinedTextField(
+                value = "%d:00".format(hour),
+                onValueChange = {},
+                readOnly = true,
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
+            )
+            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                (0..23).forEach { h ->
+                    DropdownMenuItem(
+                        text = { Text("%d:00".format(h)) },
+                        onClick = {
+                            onHourChange(h)
+                            expanded = false
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ExpiryPeriodField(value: Int, onCommit: (Int) -> Unit) {
+    var text by remember { mutableStateOf(value.toString()) }
+    LaunchedEffect(value) { text = value.toString() }
+    OutlinedTextField(
+        value = text,
+        onValueChange = { input ->
+            text = input.filter(Char::isDigit).take(4)
+            text.toIntOrNull()?.let { if (it in 1..3650) onCommit(it) }
+        },
+        label = { Text("解約までの日数") },
+        supportingText = { Text("povoの規約変更があった場合に調整できます(通常は180)") },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+    )
+}

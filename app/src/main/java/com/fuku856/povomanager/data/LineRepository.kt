@@ -1,0 +1,60 @@
+package com.fuku856.povomanager.data
+
+import com.fuku856.povomanager.data.db.LineDao
+import com.fuku856.povomanager.data.db.LineWithPurchases
+import com.fuku856.povomanager.data.db.PovoLine
+import com.fuku856.povomanager.data.db.ToppingPurchase
+import com.fuku856.povomanager.widget.WidgetUpdater
+import kotlinx.coroutines.flow.Flow
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class LineRepository @Inject constructor(
+    private val dao: LineDao,
+    private val widgetUpdater: WidgetUpdater,
+) {
+    fun observeLinesWithPurchases(): Flow<List<LineWithPurchases>> = dao.observeLinesWithPurchases()
+
+    fun observeLineWithPurchases(lineId: Long): Flow<LineWithPurchases?> =
+        dao.observeLineWithPurchases(lineId)
+
+    suspend fun getLinesWithPurchases(): List<LineWithPurchases> = dao.getLinesWithPurchases()
+
+    suspend fun getLine(lineId: Long): PovoLine? = dao.getLine(lineId)
+
+    suspend fun addLine(line: PovoLine): Long =
+        dao.insertLine(line).also { widgetUpdater.updateAll() }
+
+    suspend fun updateLine(line: PovoLine) {
+        dao.updateLine(line)
+        widgetUpdater.updateAll()
+    }
+
+    suspend fun deleteLine(line: PovoLine) {
+        dao.deleteLine(line)
+        widgetUpdater.updateAll()
+    }
+
+    suspend fun addPurchase(purchase: ToppingPurchase): Long =
+        dao.insertPurchase(purchase).also { widgetUpdater.updateAll() }
+
+    suspend fun updatePurchase(purchase: ToppingPurchase) {
+        dao.updatePurchase(purchase)
+        widgetUpdater.updateAll()
+    }
+
+    suspend fun deletePurchase(purchase: ToppingPurchase) {
+        dao.deletePurchase(purchase)
+        widgetUpdater.updateAll()
+    }
+
+    /** インポート時の全置換。linesと購入履歴はインデックスで対応付け */
+    suspend fun replaceAll(data: List<LineWithPurchases>) {
+        dao.replaceAll(
+            lines = data.map { it.line.copy(id = 0) },
+            purchasesByLineIndex = data.withIndex().associate { (index, item) -> index to item.purchases },
+        )
+        widgetUpdater.updateAll()
+    }
+}
