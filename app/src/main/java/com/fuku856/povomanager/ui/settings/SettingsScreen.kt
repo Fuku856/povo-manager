@@ -11,7 +11,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -60,6 +63,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.fuku856.povomanager.data.backup.ImportMode
 import com.fuku856.povomanager.data.settings.AppSettings
+import com.fuku856.povomanager.ui.common.formatPhoneNumber
 import com.fuku856.povomanager.ui.lineedit.NotifyDayChips
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -69,6 +73,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val importPreview by viewModel.importPreview.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var pendingImportUri by remember { mutableStateOf<Uri?>(null) }
 
@@ -177,27 +182,107 @@ fun SettingsScreen(
             title = { Text("インポート方法を選択") },
             text = {
                 Text(
-                    "上書き: 既存の回線は残し、同じ電話番号は更新・新しい回線は追加します。\n" +
+                    "追加: 既存の回線は残し、同じ電話番号は更新・新しい回線は追加します。\n" +
                         "全置換: 現在の回線・購入履歴をすべて削除し、ファイルの内容に置き換えます。",
                 )
             },
+            // 上段に「追加」「全置換」、下段に「キャンセル」を表示する。
             confirmButton = {
                 Column(horizontalAlignment = Alignment.End) {
-                    TextButton(onClick = {
-                        viewModel.importFrom(uri, ImportMode.MERGE)
-                        pendingImportUri = null
-                    }) { Text("上書き") }
-                    TextButton(onClick = {
-                        viewModel.importFrom(uri, ImportMode.REPLACE)
-                        pendingImportUri = null
-                    }) { Text("全置換", color = MaterialTheme.colorScheme.error) }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TextButton(onClick = {
+                            viewModel.prepareImport(uri, ImportMode.MERGE)
+                            pendingImportUri = null
+                        }) { Text("追加") }
+                        TextButton(onClick = {
+                            viewModel.prepareImport(uri, ImportMode.REPLACE)
+                            pendingImportUri = null
+                        }) { Text("全置換", color = MaterialTheme.colorScheme.error) }
+                    }
+                    TextButton(onClick = { pendingImportUri = null }) { Text("キャンセル") }
                 }
-            },
-            dismissButton = {
-                TextButton(onClick = { pendingImportUri = null }) { Text("キャンセル") }
             },
         )
     }
+
+    importPreview?.let { preview ->
+        ImportPreviewDialog(
+            preview = preview,
+            onConfirm = viewModel::confirmImport,
+            onCancel = viewModel::cancelImport,
+        )
+    }
+}
+
+@Composable
+private fun ImportPreviewDialog(
+    preview: ImportPreview,
+    onConfirm: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    val isReplace = preview.mode == ImportMode.REPLACE
+    AlertDialog(
+        onDismissRequest = onCancel,
+        title = { Text(if (isReplace) "全置換の確認" else "追加の確認") },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    if (isReplace) {
+                        "現在の回線をすべて削除し、以下の${preview.lines.size}回線に置き換えます。"
+                    } else {
+                        "以下の${preview.lines.size}回線を取り込みます(同じ電話番号は更新)。"
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Spacer(Modifier.height(12.dp))
+                if (preview.lines.isEmpty()) {
+                    Text(
+                        "ファイルに回線が含まれていません。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 280.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(preview.lines) { line ->
+                            val name = line.name?.takeIf { it.isNotBlank() }
+                            Column {
+                                Text(
+                                    name ?: formatPhoneNumber(line.phoneNumber),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                )
+                                if (name != null) {
+                                    Text(
+                                        formatPhoneNumber(line.phoneNumber),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                enabled = preview.lines.isNotEmpty() || isReplace,
+            ) {
+                Text(
+                    if (isReplace) "全置換する" else "追加する",
+                    color = if (isReplace) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onCancel) { Text("キャンセル") }
+        },
+    )
 }
 
 @Composable
