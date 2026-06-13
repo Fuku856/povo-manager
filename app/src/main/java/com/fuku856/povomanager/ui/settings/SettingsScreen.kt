@@ -106,7 +106,7 @@ fun SettingsScreen(
             SectionTitle("通知")
 
             Column {
-                Text("解約期限の通知タイミング(共通設定)", style = MaterialTheme.typography.bodyLarge)
+                Text("自動解約日の通知タイミング(共通設定)", style = MaterialTheme.typography.bodyLarge)
                 Text(
                     "回線ごとの個別設定がある場合はそちらが優先されます",
                     style = MaterialTheme.typography.bodySmall,

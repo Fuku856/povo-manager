@@ -178,7 +178,7 @@ private fun LineCard(
                 Spacer(Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     LabeledDate("最終購入", status.lastPurchaseDate)
-                    LabeledDate("解約期限", status.expiryDate)
+                    LabeledDate("自動解約日", status.expiryDate)
                 }
             } else {
                 Text(

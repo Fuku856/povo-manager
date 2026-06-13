@@ -32,7 +32,7 @@ class NotificationHelper @Inject constructor(
 
     fun ensureChannels() {
         manager.createNotificationChannel(
-            NotificationChannel(CHANNEL_EXPIRY, "解約期限", NotificationManager.IMPORTANCE_HIGH).apply {
+            NotificationChannel(CHANNEL_EXPIRY, "自動解約日", NotificationManager.IMPORTANCE_HIGH).apply {
                 description = "180日期限が近づいた回線の通知"
             }
         )
@@ -49,10 +49,10 @@ class NotificationHelper @Inject constructor(
         val name = status.line.displayName
         val (title, text) = when {
             remaining < 0 ->
-                "【povo】期限切れの可能性: $name" to
+                "【povo】自動解約の可能性: $name" to
                     "期限(${expiry.toDisplayString()})を過ぎています。回線状態を確認してください。"
             remaining == 0L ->
-                "【povo】本日が解約期限です: $name" to
+                "【povo】本日が自動解約日です: $name" to
                     "今日中にトッピングを購入しないと自動解約される可能性があります。"
             else ->
                 "【povo】解約まであと${remaining}日: $name" to
