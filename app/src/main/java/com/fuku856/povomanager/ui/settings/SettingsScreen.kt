@@ -1,5 +1,6 @@
 package com.fuku856.povomanager.ui.settings
 
+import android.content.res.Configuration
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -19,16 +20,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -36,12 +34,16 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimeInput
+import androidx.compose.material3.TimePicker
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.size
@@ -49,6 +51,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -129,9 +132,10 @@ fun SettingsScreen(
                 )
             }
 
-            NotifyHourSelector(
+            NotifyTimeSelector(
                 hour = settings.notifyHour,
-                onHourChange = viewModel::setNotifyHour,
+                minute = settings.notifyMinute,
+                onTimeChange = viewModel::setNotifyTime,
             )
 
             HorizontalDivider()
@@ -203,31 +207,56 @@ fun SectionTitle(text: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun NotifyHourSelector(hour: Int, onHourChange: (Int) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
+private fun NotifyTimeSelector(hour: Int, minute: Int, onTimeChange: (Int, Int) -> Unit) {
+    var showDialog by rememberSaveable { mutableStateOf(false) }
     Column {
         Text("通知時刻", style = MaterialTheme.typography.bodyLarge)
         Spacer(Modifier.height(8.dp))
-        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-            OutlinedTextField(
-                value = "%d:00".format(hour),
-                onValueChange = {},
-                readOnly = true,
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
-            )
-            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                (0..23).forEach { h ->
-                    DropdownMenuItem(
-                        text = { Text("%d:00".format(h)) },
-                        onClick = {
-                            onHourChange(h)
-                            expanded = false
-                        },
-                    )
-                }
-            }
+        OutlinedButton(onClick = { showDialog = true }) {
+            Icon(Icons.Default.Schedule, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("%02d:%02d".format(hour, minute))
         }
+    }
+
+    if (showDialog) {
+        val timePickerState = rememberTimePickerState(
+            initialHour = hour,
+            initialMinute = minute,
+            is24Hour = true,
+        )
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    onTimeChange(timePickerState.hour, timePickerState.minute)
+                    showDialog = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDialog = false }) { Text("キャンセル") }
+            },
+            title = { Text("通知時刻") },
+            text = {
+                // 横画面では時計ダイヤルが収まらずボタンが押せなくなるため、
+                // 縦画面はダイヤル(TimePicker)、横画面は数値入力(TimeInput)に切り替える。
+                // どちらでも高さが不足したときに見切れないよう縦スクロールを許可する。
+                val isPortrait = LocalConfiguration.current.orientation ==
+                    Configuration.ORIENTATION_PORTRAIT
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    if (isPortrait) {
+                        TimePicker(state = timePickerState)
+                    } else {
+                        TimeInput(state = timePickerState)
+                    }
+                }
+            },
+        )
     }
 }
 

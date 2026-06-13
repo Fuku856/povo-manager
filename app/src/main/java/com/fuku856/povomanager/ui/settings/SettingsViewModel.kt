@@ -63,11 +63,11 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun setNotifyHour(hour: Int) {
+    fun setNotifyTime(hour: Int, minute: Int) {
         viewModelScope.launch {
-            settingsRepository.setNotifyHour(hour)
+            settingsRepository.setNotifyTime(hour, minute)
             // 通知時刻の変更時は既存スケジュールを置き換える
-            notificationScheduler.schedule(hour, replace = true)
+            notificationScheduler.schedule(hour, minute, replace = true)
         }
     }
 

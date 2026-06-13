@@ -49,6 +49,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.fuku856.povomanager.ui.common.PhoneNumberVisualTransformation
 import com.fuku856.povomanager.ui.common.toDisplayString
 import java.time.Instant
 import java.time.ZoneOffset
@@ -100,6 +101,7 @@ fun LineEditScreen(
                 isError = state.phoneError != null,
                 supportingText = { state.phoneError?.let { Text(it) } },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                visualTransformation = remember { PhoneNumberVisualTransformation() },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )

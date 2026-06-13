@@ -5,6 +5,8 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
@@ -44,7 +46,18 @@ fun PovoApp(initialLineId: Long? = null) {
         }
     }
 
-    NavHost(navController = navController, startDestination = HomeRoute) {
+    // 画面遷移は横スライド(進む=右から、戻る=左へ)で短めの duration とし、
+    // もっさり感を解消する。pop 遷移を定義することで予測型戻る(predictive back)時に
+    // 前画面がプレビュー表示される(AndroidManifest の enableOnBackInvokedCallback と併用)。
+    val transitionDuration = 280
+    NavHost(
+        navController = navController,
+        startDestination = HomeRoute,
+        enterTransition = { slideIntoContainer(SlideDirection.Start, tween(transitionDuration)) },
+        exitTransition = { slideOutOfContainer(SlideDirection.Start, tween(transitionDuration)) },
+        popEnterTransition = { slideIntoContainer(SlideDirection.End, tween(transitionDuration)) },
+        popExitTransition = { slideOutOfContainer(SlideDirection.End, tween(transitionDuration)) },
+    ) {
         composable<HomeRoute> {
             HomeScreen(
                 onLineClick = { navController.navigate(LineDetailRoute(it)) },
