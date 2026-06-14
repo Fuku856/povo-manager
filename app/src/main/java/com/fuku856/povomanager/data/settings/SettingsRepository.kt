@@ -3,6 +3,7 @@ package com.fuku856.povomanager.data.settings
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
@@ -25,6 +26,8 @@ data class AppSettings(
     val notifyMinute: Int = DEFAULT_NOTIFY_MINUTE,
     /** 解約までの日数(povoの規約変更に備えて変更可能) */
     val expiryPeriodDays: Int = DEFAULT_EXPIRY_PERIOD_DAYS,
+    /** ウィジェットを手動並び替え順で表示するか。false=期限の早い順(デフォルト) */
+    val widgetManualOrder: Boolean = false,
 ) {
     companion object {
         val DEFAULT_NOTIFY_DAYS = setOf(30, 14, 7, 3, 1, 0)
@@ -51,6 +54,7 @@ class SettingsRepository @Inject constructor(
         val NOTIFY_HOUR = intPreferencesKey("notify_hour")
         val NOTIFY_MINUTE = intPreferencesKey("notify_minute")
         val EXPIRY_PERIOD_DAYS = intPreferencesKey("expiry_period_days")
+        val WIDGET_MANUAL_ORDER = booleanPreferencesKey("widget_manual_order")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
@@ -64,6 +68,7 @@ class SettingsRepository @Inject constructor(
             notifyHour = prefs[Keys.NOTIFY_HOUR] ?: AppSettings.DEFAULT_NOTIFY_HOUR,
             notifyMinute = prefs[Keys.NOTIFY_MINUTE] ?: AppSettings.DEFAULT_NOTIFY_MINUTE,
             expiryPeriodDays = prefs[Keys.EXPIRY_PERIOD_DAYS] ?: AppSettings.DEFAULT_EXPIRY_PERIOD_DAYS,
+            widgetManualOrder = prefs[Keys.WIDGET_MANUAL_ORDER] ?: false,
         )
     }
 
@@ -86,5 +91,9 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setExpiryPeriodDays(days: Int) {
         context.dataStore.edit { it[Keys.EXPIRY_PERIOD_DAYS] = days }
+    }
+
+    suspend fun setWidgetManualOrder(enabled: Boolean) {
+        context.dataStore.edit { it[Keys.WIDGET_MANUAL_ORDER] = enabled }
     }
 }
