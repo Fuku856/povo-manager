@@ -11,6 +11,8 @@ import androidx.glance.ImageProvider
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.cornerRadius
+import androidx.glance.appwidget.lazy.LazyColumn
+import androidx.glance.appwidget.lazy.items
 import androidx.glance.appwidget.provideContent
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
@@ -35,7 +37,6 @@ import com.fuku856.povomanager.data.settings.SettingsRepository
 import com.fuku856.povomanager.domain.LineStatus
 import com.fuku856.povomanager.domain.toStatus
 import com.fuku856.povomanager.ui.common.displayName
-import com.fuku856.povomanager.ui.common.toDisplayString
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -88,7 +89,7 @@ private fun WidgetContent(statuses: List<LineStatus>) {
         Text(
             "povo期限",
             style = TextStyle(
-                fontSize = 13.sp,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
                 color = GlanceTheme.colors.onSurfaceVariant,
             ),
@@ -98,65 +99,52 @@ private fun WidgetContent(statuses: List<LineStatus>) {
         if (statuses.isEmpty()) {
             Text(
                 "回線が未登録です",
-                style = TextStyle(fontSize = 15.sp, color = GlanceTheme.colors.onSurface),
+                style = TextStyle(fontSize = 16.sp, color = GlanceTheme.colors.onSurface),
             )
             return@Column
         }
 
-        val top = statuses.first()
-        Text(
-            top.line.displayName,
-            style = TextStyle(
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium,
-                color = GlanceTheme.colors.onSurface,
-            ),
-            maxLines = 1,
-        )
-        Spacer(GlanceModifier.height(4.dp))
-        RemainingChip(top.daysRemaining, large = true)
-        top.expiryDate?.let {
-            Spacer(GlanceModifier.height(4.dp))
-            Text(
-                "期限: ${it.toDisplayString()}",
-                style = TextStyle(fontSize = 13.sp, color = GlanceTheme.colors.onSurfaceVariant),
-            )
-        }
-
-        statuses.drop(1).take(3).forEach { status ->
-            Spacer(GlanceModifier.height(8.dp))
-            Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    status.line.displayName,
-                    style = TextStyle(fontSize = 15.sp, color = GlanceTheme.colors.onSurface),
-                    maxLines = 1,
-                    modifier = GlanceModifier.defaultWeight(),
-                )
-                Spacer(GlanceModifier.width(8.dp))
-                RemainingChip(status.daysRemaining, large = false)
+        // 全回線を均一な行(回線名 + 右に残日数)で表示する。ウィジェットを大きくすると
+        // 残りの高さを使って多くの回線が並び、収まらない分はスクロールできる。
+        LazyColumn(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
+            items(statuses) { status ->
+                Row(
+                    modifier = GlanceModifier.fillMaxWidth().padding(vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        status.line.displayName,
+                        style = TextStyle(
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = GlanceTheme.colors.onSurface,
+                        ),
+                        maxLines = 1,
+                        modifier = GlanceModifier.defaultWeight(),
+                    )
+                    Spacer(GlanceModifier.width(8.dp))
+                    RemainingChip(status.daysRemaining)
+                }
             }
         }
     }
 }
 
-/** 残日数の角丸チップ。アプリ本体の RemainingDaysBadge に見た目を寄せる。 */
+/** 残日数の角丸チップ。回線名の右に表示する。アプリ本体の RemainingDaysBadge に見た目を寄せる。 */
 @Composable
-private fun RemainingChip(daysRemaining: Long?, large: Boolean) {
+private fun RemainingChip(daysRemaining: Long?) {
     val colors = chipColors(daysRemaining)
     Row(
         modifier = GlanceModifier
             .background(colors.container)
-            .cornerRadius(if (large) 14.dp else 10.dp)
-            .padding(
-                horizontal = if (large) 12.dp else 8.dp,
-                vertical = if (large) 6.dp else 3.dp,
-            ),
+            .cornerRadius(10.dp)
+            .padding(horizontal = 10.dp, vertical = 4.dp),
     ) {
         Text(
             remainingText(daysRemaining),
             style = TextStyle(
-                fontSize = if (large) 26.sp else 14.sp,
-                fontWeight = if (large) FontWeight.Bold else FontWeight.Medium,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
                 color = colors.content,
             ),
         )
