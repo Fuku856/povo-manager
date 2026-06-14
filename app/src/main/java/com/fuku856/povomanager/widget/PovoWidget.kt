@@ -1,6 +1,8 @@
 package com.fuku856.povomanager.widget
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -8,13 +10,14 @@ import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.ImageProvider
+import androidx.glance.LocalContext
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.lazy.LazyColumn
 import androidx.glance.appwidget.lazy.items
 import androidx.glance.appwidget.provideContent
-import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.background
 import androidx.glance.layout.Alignment
@@ -36,6 +39,7 @@ import com.fuku856.povomanager.data.LineRepository
 import com.fuku856.povomanager.data.settings.SettingsRepository
 import com.fuku856.povomanager.domain.LineStatus
 import com.fuku856.povomanager.domain.toStatus
+import com.fuku856.povomanager.notifications.NotificationHelper
 import com.fuku856.povomanager.ui.common.displayName
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -79,6 +83,7 @@ class PovoWidget : GlanceAppWidget() {
 
 @Composable
 private fun WidgetContent(statuses: List<LineStatus>) {
+    val context = LocalContext.current
     // 注: ルートに .clickable を付けると全面がタップ領域になり、LazyColumn(ListView)の
     // スクロールを奪うランチャーがある。クリックは各行(と空表示)に個別に持たせる。
     Column(
@@ -101,7 +106,7 @@ private fun WidgetContent(statuses: List<LineStatus>) {
             Text(
                 "回線が未登録です",
                 style = TextStyle(fontSize = 16.sp, color = GlanceTheme.colors.onSurface),
-                modifier = GlanceModifier.clickable(actionStartActivity<MainActivity>()),
+                modifier = GlanceModifier.clickable(actionStartActivity(openAppIntent(context))),
             )
             return@Column
         }
@@ -114,7 +119,7 @@ private fun WidgetContent(statuses: List<LineStatus>) {
                     modifier = GlanceModifier
                         .fillMaxWidth()
                         .padding(vertical = 6.dp)
-                        .clickable(actionStartActivity<MainActivity>()),
+                        .clickable(actionStartActivity(lineDetailIntent(context, status.line.id))),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
@@ -155,6 +160,24 @@ private fun RemainingChip(daysRemaining: Long?) {
         )
     }
 }
+
+/** ウィジェットからアプリのホームを開くIntent。 */
+private fun openAppIntent(context: Context): Intent =
+    Intent(context, MainActivity::class.java).apply {
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+    }
+
+/**
+ * 指定回線の詳細を開くIntent。MainActivity が EXTRA_LINE_ID を読んで詳細へ遷移する(通知と同じ仕組み)。
+ * extras は PendingIntent の filterEquals で無視され全行が同一視されてしまうため、
+ * 回線ごとに一意の data Uri を設定して区別する。
+ */
+private fun lineDetailIntent(context: Context, lineId: Long): Intent =
+    Intent(context, MainActivity::class.java).apply {
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        putExtra(NotificationHelper.EXTRA_LINE_ID, lineId)
+        data = Uri.parse("povomanager://line/$lineId")
+    }
 
 private fun remainingText(daysRemaining: Long?): String = when {
     daysRemaining == null -> "履歴なし"
