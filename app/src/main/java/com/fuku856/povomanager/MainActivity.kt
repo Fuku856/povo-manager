@@ -22,7 +22,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        deepLinkLineId = intent.lineIdExtra()
+        deepLinkLineId = consumeLineIdExtra()
         setContent {
             PovoManagerTheme {
                 PovoApp(
@@ -36,9 +36,16 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        deepLinkLineId = intent.lineIdExtra()
+        deepLinkLineId = consumeLineIdExtra()
     }
 
-    private fun Intent.lineIdExtra(): Long? =
-        getLongExtra(NotificationHelper.EXTRA_LINE_ID, -1L).takeIf { it != -1L }
+    /**
+     * Intent から回線IDを読み取り、読み取れたら extra を消す。
+     * 残しておくと画面回転などの再生成時に onCreate が再度読み込んで意図せず再遷移するため。
+     */
+    private fun consumeLineIdExtra(): Long? {
+        val id = intent.getLongExtra(NotificationHelper.EXTRA_LINE_ID, -1L).takeIf { it != -1L }
+        if (id != null) intent.removeExtra(NotificationHelper.EXTRA_LINE_ID)
+        return id
+    }
 }

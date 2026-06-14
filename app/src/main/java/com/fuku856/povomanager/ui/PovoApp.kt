@@ -42,9 +42,13 @@ fun PovoApp(deepLinkLineId: Long? = null, onDeepLinkConsumed: () -> Unit = {}) {
 
     // 通知/ウィジェットから渡された回線IDで詳細へ遷移する。消費後にnullへ戻すことで、
     // 同じ回線を続けてタップしても再遷移できるようにする。
+    // どの画面から来てもホーム起点に正規化(戻るでホームへ)し、画面が積み重ならないようにする。
     LaunchedEffect(deepLinkLineId) {
         if (deepLinkLineId != null) {
-            navController.navigate(LineDetailRoute(deepLinkLineId)) { launchSingleTop = true }
+            navController.navigate(LineDetailRoute(deepLinkLineId)) {
+                popUpTo(HomeRoute) { inclusive = false }
+                launchSingleTop = true
+            }
             onDeepLinkConsumed()
         }
     }
