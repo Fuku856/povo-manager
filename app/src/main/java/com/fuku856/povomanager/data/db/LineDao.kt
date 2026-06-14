@@ -41,6 +41,12 @@ interface LineDao {
     @Query("UPDATE lines SET sortOrder = :order WHERE id = :id")
     suspend fun updateLineSortOrder(id: Long, order: Int)
 
+    /** 並び順を一括更新する。中途半端な並びが残らないようトランザクションで囲む。 */
+    @Transaction
+    suspend fun updateLineSortOrders(orderedIds: List<Long>) {
+        orderedIds.forEachIndexed { index, id -> updateLineSortOrder(id, index) }
+    }
+
     @Delete
     suspend fun deleteLine(line: PovoLine)
 

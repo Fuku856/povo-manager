@@ -38,7 +38,7 @@ class LineRepository @Inject constructor(
 
     /** ウィジェットの手動並び替え順を保存する。リストの並び順を sortOrder として書き込む。 */
     suspend fun setLineOrder(orderedIds: List<Long>) {
-        orderedIds.forEachIndexed { index, id -> dao.updateLineSortOrder(id, index) }
+        dao.updateLineSortOrders(orderedIds)
         widgetUpdater.updateAll()
     }
 
