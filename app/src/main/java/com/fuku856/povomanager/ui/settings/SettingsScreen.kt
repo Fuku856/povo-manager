@@ -39,6 +39,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimeInput
@@ -81,6 +82,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val widgetLines by viewModel.widgetLines.collectAsStateWithLifecycle()
     val importPreview by viewModel.importPreview.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     var pendingImportUri by remember { mutableStateOf<Uri?>(null) }
@@ -157,6 +159,16 @@ fun SettingsScreen(
             ExpiryPeriodField(
                 value = settings.expiryPeriodDays,
                 onCommit = viewModel::setExpiryPeriodDays,
+            )
+
+            HorizontalDivider()
+            SectionTitle("ウィジェット")
+
+            WidgetOrderSettings(
+                manualOrder = settings.widgetManualOrder,
+                onManualOrderChange = viewModel::setWidgetManualOrder,
+                lines = widgetLines,
+                onOrderChanged = viewModel::commitWidgetOrder,
             )
 
             HorizontalDivider()
@@ -300,6 +312,44 @@ private fun ImportPreviewDialog(
 @Composable
 fun SectionTitle(text: String) {
     Text(text, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+}
+
+@Composable
+private fun WidgetOrderSettings(
+    manualOrder: Boolean,
+    onManualOrderChange: (Boolean) -> Unit,
+    lines: List<WidgetLineRow>,
+    onOrderChanged: (List<Long>) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("手動で並び替える", style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    if (manualOrder) {
+                        "下のリストをドラッグして表示順を変更できます"
+                    } else {
+                        "期限の早い順に表示します"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(checked = manualOrder, onCheckedChange = onManualOrderChange)
+        }
+
+        if (manualOrder) {
+            if (lines.isEmpty()) {
+                Text(
+                    "回線が登録されていません",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                ReorderableWidgetLineList(lines = lines, onOrderChanged = onOrderChanged)
+            }
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

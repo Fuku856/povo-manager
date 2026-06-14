@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ウィジェット背景(ダーク)。Material3 surface 相当 -->
+    <color name="widget_background">#191C1E</color>
+</resources>

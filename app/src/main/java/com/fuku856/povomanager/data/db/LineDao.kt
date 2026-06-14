@@ -38,6 +38,9 @@ interface LineDao {
     @Update
     suspend fun updateLine(line: PovoLine)
 
+    @Query("UPDATE lines SET sortOrder = :order WHERE id = :id")
+    suspend fun updateLineSortOrder(id: Long, order: Int)
+
     @Delete
     suspend fun deleteLine(line: PovoLine)
 
