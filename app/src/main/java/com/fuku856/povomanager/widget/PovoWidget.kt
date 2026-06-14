@@ -79,12 +79,13 @@ class PovoWidget : GlanceAppWidget() {
 
 @Composable
 private fun WidgetContent(statuses: List<LineStatus>) {
+    // 注: ルートに .clickable を付けると全面がタップ領域になり、LazyColumn(ListView)の
+    // スクロールを奪うランチャーがある。クリックは各行(と空表示)に個別に持たせる。
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
             .background(ImageProvider(R.drawable.widget_background))
-            .padding(16.dp)
-            .clickable(actionStartActivity<MainActivity>()),
+            .padding(16.dp),
     ) {
         Text(
             "povo期限",
@@ -100,6 +101,7 @@ private fun WidgetContent(statuses: List<LineStatus>) {
             Text(
                 "回線が未登録です",
                 style = TextStyle(fontSize = 16.sp, color = GlanceTheme.colors.onSurface),
+                modifier = GlanceModifier.clickable(actionStartActivity<MainActivity>()),
             )
             return@Column
         }
@@ -109,7 +111,10 @@ private fun WidgetContent(statuses: List<LineStatus>) {
         LazyColumn(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
             items(statuses) { status ->
                 Row(
-                    modifier = GlanceModifier.fillMaxWidth().padding(vertical = 6.dp),
+                    modifier = GlanceModifier
+                        .fillMaxWidth()
+                        .padding(vertical = 6.dp)
+                        .clickable(actionStartActivity<MainActivity>()),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
