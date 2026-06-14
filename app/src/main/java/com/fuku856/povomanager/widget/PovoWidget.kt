@@ -1,6 +1,8 @@
 package com.fuku856.povomanager.widget
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -8,11 +10,14 @@ import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.ImageProvider
+import androidx.glance.LocalContext
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import androidx.glance.appwidget.action.actionStartActivity
 import androidx.glance.appwidget.cornerRadius
+import androidx.glance.appwidget.lazy.LazyColumn
+import androidx.glance.appwidget.lazy.items
 import androidx.glance.appwidget.provideContent
-import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.background
 import androidx.glance.layout.Alignment
@@ -34,8 +39,8 @@ import com.fuku856.povomanager.data.LineRepository
 import com.fuku856.povomanager.data.settings.SettingsRepository
 import com.fuku856.povomanager.domain.LineStatus
 import com.fuku856.povomanager.domain.toStatus
+import com.fuku856.povomanager.notifications.NotificationHelper
 import com.fuku856.povomanager.ui.common.displayName
-import com.fuku856.povomanager.ui.common.toDisplayString
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -78,17 +83,19 @@ class PovoWidget : GlanceAppWidget() {
 
 @Composable
 private fun WidgetContent(statuses: List<LineStatus>) {
+    val context = LocalContext.current
+    // 注: ルートに .clickable を付けると全面がタップ領域になり、LazyColumn(ListView)の
+    // スクロールを奪うランチャーがある。クリックは各行(と空表示)に個別に持たせる。
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
             .background(ImageProvider(R.drawable.widget_background))
-            .padding(16.dp)
-            .clickable(actionStartActivity<MainActivity>()),
+            .padding(16.dp),
     ) {
         Text(
             "povo期限",
             style = TextStyle(
-                fontSize = 13.sp,
+                fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
                 color = GlanceTheme.colors.onSurfaceVariant,
             ),
@@ -98,70 +105,79 @@ private fun WidgetContent(statuses: List<LineStatus>) {
         if (statuses.isEmpty()) {
             Text(
                 "回線が未登録です",
-                style = TextStyle(fontSize = 15.sp, color = GlanceTheme.colors.onSurface),
+                style = TextStyle(fontSize = 16.sp, color = GlanceTheme.colors.onSurface),
+                modifier = GlanceModifier.clickable(actionStartActivity(openAppIntent(context))),
             )
             return@Column
         }
 
-        val top = statuses.first()
-        Text(
-            top.line.displayName,
-            style = TextStyle(
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium,
-                color = GlanceTheme.colors.onSurface,
-            ),
-            maxLines = 1,
-        )
-        Spacer(GlanceModifier.height(4.dp))
-        RemainingChip(top.daysRemaining, large = true)
-        top.expiryDate?.let {
-            Spacer(GlanceModifier.height(4.dp))
-            Text(
-                "期限: ${it.toDisplayString()}",
-                style = TextStyle(fontSize = 13.sp, color = GlanceTheme.colors.onSurfaceVariant),
-            )
-        }
-
-        statuses.drop(1).take(3).forEach { status ->
-            Spacer(GlanceModifier.height(8.dp))
-            Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    status.line.displayName,
-                    style = TextStyle(fontSize = 15.sp, color = GlanceTheme.colors.onSurface),
-                    maxLines = 1,
-                    modifier = GlanceModifier.defaultWeight(),
-                )
-                Spacer(GlanceModifier.width(8.dp))
-                RemainingChip(status.daysRemaining, large = false)
+        // 全回線を均一な行(回線名 + 右に残日数)で表示する。ウィジェットを大きくすると
+        // 残りの高さを使って多くの回線が並び、収まらない分はスクロールできる。
+        LazyColumn(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
+            items(statuses) { status ->
+                Row(
+                    modifier = GlanceModifier
+                        .fillMaxWidth()
+                        .padding(vertical = 6.dp)
+                        .clickable(actionStartActivity(lineDetailIntent(context, status.line.id))),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        status.line.displayName,
+                        style = TextStyle(
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = GlanceTheme.colors.onSurface,
+                        ),
+                        maxLines = 1,
+                        modifier = GlanceModifier.defaultWeight(),
+                    )
+                    Spacer(GlanceModifier.width(8.dp))
+                    RemainingChip(status.daysRemaining)
+                }
             }
         }
     }
 }
 
-/** 残日数の角丸チップ。アプリ本体の RemainingDaysBadge に見た目を寄せる。 */
+/** 残日数の角丸チップ。回線名の右に表示する。アプリ本体の RemainingDaysBadge に見た目を寄せる。 */
 @Composable
-private fun RemainingChip(daysRemaining: Long?, large: Boolean) {
+private fun RemainingChip(daysRemaining: Long?) {
     val colors = chipColors(daysRemaining)
     Row(
         modifier = GlanceModifier
             .background(colors.container)
-            .cornerRadius(if (large) 14.dp else 10.dp)
-            .padding(
-                horizontal = if (large) 12.dp else 8.dp,
-                vertical = if (large) 6.dp else 3.dp,
-            ),
+            .cornerRadius(10.dp)
+            .padding(horizontal = 10.dp, vertical = 4.dp),
     ) {
         Text(
             remainingText(daysRemaining),
             style = TextStyle(
-                fontSize = if (large) 26.sp else 14.sp,
-                fontWeight = if (large) FontWeight.Bold else FontWeight.Medium,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
                 color = colors.content,
             ),
         )
     }
 }
+
+/** ウィジェットからアプリのホームを開くIntent。 */
+private fun openAppIntent(context: Context): Intent =
+    Intent(context, MainActivity::class.java).apply {
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+    }
+
+/**
+ * 指定回線の詳細を開くIntent。MainActivity が EXTRA_LINE_ID を読んで詳細へ遷移する(通知と同じ仕組み)。
+ * extras は PendingIntent の filterEquals で無視され全行が同一視されてしまうため、
+ * 回線ごとに一意の data Uri を設定して区別する。
+ */
+private fun lineDetailIntent(context: Context, lineId: Long): Intent =
+    Intent(context, MainActivity::class.java).apply {
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        putExtra(NotificationHelper.EXTRA_LINE_ID, lineId)
+        data = Uri.parse("povomanager://line/$lineId")
+    }
 
 private fun remainingText(daysRemaining: Long?): String = when {
     daysRemaining == null -> "履歴なし"
