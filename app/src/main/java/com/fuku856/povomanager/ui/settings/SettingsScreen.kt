@@ -62,13 +62,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.fuku856.povomanager.R
 import com.fuku856.povomanager.data.backup.ImportMode
 import com.fuku856.povomanager.data.settings.AppSettings
 import com.fuku856.povomanager.ui.common.formatPhoneNumber
@@ -193,6 +196,8 @@ fun SettingsScreen(
                 value = settings.expiryPeriodDays,
                 onCommit = viewModel::setExpiryPeriodDays,
             )
+
+            AppInfoSection()
         }
     }
 
@@ -307,6 +312,35 @@ private fun ImportPreviewDialog(
             TextButton(onClick = onCancel) { Text("キャンセル") }
         },
     )
+}
+
+@Composable
+private fun AppInfoSection() {
+    val context = LocalContext.current
+    val versionName = remember {
+        runCatching {
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName
+        }.getOrNull().orEmpty()
+    }
+
+    HorizontalDivider()
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(stringResource(R.string.app_name), style = MaterialTheme.typography.titleMedium)
+        Text(
+            "バージョン $versionName",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            "© 2026 Fuku856",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
 }
 
 @Composable
@@ -443,15 +477,22 @@ private fun ExpiryPeriodField(value: Int, onCommit: (Int) -> Unit) {
     var text by remember { mutableStateOf(value.toString()) }
     LaunchedEffect(value) { text = value.toString() }
     val focusManager = LocalFocusManager.current
+    // 推奨値(180日)以外へ変更する確定時に確認ダイアログを挟むための保留値
+    var pendingValue by remember { mutableStateOf<Int?>(null) }
 
     // 入力途中の中間値を保存しないよう、フォーカス喪失/Done時にのみ確定する
     fun commit() {
         val parsed = text.toIntOrNull()?.coerceIn(1, 3650)
-        if (parsed != null) {
-            if (parsed != value) onCommit(parsed)
-            text = parsed.toString()
-        } else {
-            text = value.toString() // 空など無効な入力は元に戻す
+        when {
+            parsed == null -> text = value.toString() // 空など無効な入力は元に戻す
+            parsed == value -> text = parsed.toString() // 変化なし
+            // 推奨値へ戻すときは警告なしで即確定する
+            parsed == AppSettings.DEFAULT_EXPIRY_PERIOD_DAYS -> {
+                onCommit(parsed)
+                text = parsed.toString()
+            }
+            // 180日以外への変更は、確定前に警告ダイアログで確認する
+            else -> pendingValue = parsed
         }
     }
 
@@ -473,4 +514,37 @@ private fun ExpiryPeriodField(value: Int, onCommit: (Int) -> Unit) {
             .fillMaxWidth()
             .onFocusChanged { if (!it.isFocused) commit() },
     )
+
+    pendingValue?.let { pending ->
+        AlertDialog(
+            onDismissRequest = {
+                text = value.toString() // 入力を元に戻す
+                pendingValue = null
+            },
+            title = { Text("解約日数の変更") },
+            text = {
+                Text(
+                    "通常は180日です。この値は自動解約日の計算に使われ、" +
+                        "変更すると全回線の期限表示がずれる場合があります。" +
+                        "povoの規約変更があった場合のみ変更してください。",
+                    color = MaterialTheme.colorScheme.error,
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onCommit(pending)
+                    text = pending.toString()
+                    pendingValue = null
+                }) {
+                    Text("変更する", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    text = value.toString()
+                    pendingValue = null
+                }) { Text("キャンセル") }
+            },
+        )
+    }
 }
