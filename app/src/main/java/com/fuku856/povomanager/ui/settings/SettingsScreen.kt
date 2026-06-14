@@ -154,14 +154,6 @@ fun SettingsScreen(
             )
 
             HorizontalDivider()
-            SectionTitle("詳細設定")
-
-            ExpiryPeriodField(
-                value = settings.expiryPeriodDays,
-                onCommit = viewModel::setExpiryPeriodDays,
-            )
-
-            HorizontalDivider()
             SectionTitle("ウィジェット")
 
             WidgetOrderSettings(
@@ -193,6 +185,14 @@ fun SettingsScreen(
                     }
                 }
             }
+
+            HorizontalDivider()
+            SectionTitle("詳細設定")
+
+            ExpiryPeriodField(
+                value = settings.expiryPeriodDays,
+                onCommit = viewModel::setExpiryPeriodDays,
+            )
         }
     }
 
@@ -459,7 +459,7 @@ private fun ExpiryPeriodField(value: Int, onCommit: (Int) -> Unit) {
         value = text,
         onValueChange = { input -> text = input.filter(Char::isDigit).take(4) },
         label = { Text("解約までの日数") },
-        supportingText = { Text("povoの規約変更があった場合に調整できます(通常は180)") },
+        supportingText = { Text("povoの規約変更があった場合に調整できます(通常は180日)") },
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.Number,
             imeAction = ImeAction.Done,

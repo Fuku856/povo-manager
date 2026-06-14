@@ -93,7 +93,7 @@ private fun WidgetContent(statuses: List<LineStatus>) {
             .padding(16.dp),
     ) {
         Text(
-            "povo期限",
+            "povo Manager",
             style = TextStyle(
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
@@ -181,7 +181,7 @@ private fun lineDetailIntent(context: Context, lineId: Long): Intent =
 
 private fun remainingText(daysRemaining: Long?): String = when {
     daysRemaining == null -> "履歴なし"
-    daysRemaining < 0 -> "期限切れ?"
+    daysRemaining < 0 -> "期限切れ"
     daysRemaining == 0L -> "本日期限!"
     else -> "あと${daysRemaining}日"
 }
