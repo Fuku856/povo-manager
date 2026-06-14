@@ -287,7 +287,7 @@ private fun insertCalendarEvent(context: android.content.Context, status: LineSt
         putExtra(CalendarContract.Events.TITLE, "povo自動解約日: ${status.line.displayName}")
         putExtra(
             CalendarContract.Events.DESCRIPTION,
-            "povo回線(${formatPhoneNumber(status.line.phoneNumber)})の180日 自動解約日です。トッピングを購入してください。",
+            "povo回線(${formatPhoneNumber(status.line.phoneNumber)})の自動解約日です。トッピングを購入してください。",
         )
     }
     runCatching { context.startActivity(intent) }
