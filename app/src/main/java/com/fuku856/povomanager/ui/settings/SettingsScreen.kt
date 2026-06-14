@@ -2,6 +2,7 @@ package com.fuku856.povomanager.ui.settings
 
 import android.content.res.Configuration
 import android.net.Uri
+import android.os.Build
 import android.view.HapticFeedbackConstants
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -14,6 +15,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -56,6 +59,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
@@ -321,6 +325,13 @@ private fun NotifyTimeSelector(hour: Int, minute: Int, onTimeChange: (Int, Int) 
         // 針を動かして時/分が変わるたびに、OS標準の時計ピッカーと同じ「カチッ」という
         // 触覚フィードバックを鳴らす。初回の値はスキップする。
         val view = LocalView.current
+        // 指を離して確定したときは、ティックより少し強い確定用の振動を鳴らす。
+        // CONFIRM は API 30 以降のため、それ未満では LONG_PRESS で代替する。
+        val confirmHaptic = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            HapticFeedbackConstants.CONFIRM
+        } else {
+            HapticFeedbackConstants.LONG_PRESS
+        }
         LaunchedEffect(timePickerState) {
             snapshotFlow { timePickerState.hour to timePickerState.minute }
                 .drop(1)
@@ -353,7 +364,21 @@ private fun NotifyTimeSelector(hour: Int, minute: Int, onTimeChange: (Int, Int) 
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     if (isPortrait) {
-                        TimePicker(state = timePickerState)
+                        TimePicker(
+                            state = timePickerState,
+                            // ダイヤル上で指が離れた(=その値で確定した)瞬間に確定用の振動を鳴らす。
+                            // requireUnconsumed=false と未consumeでイベントを観測のみ行い、
+                            // TimePicker本来の操作は阻害しない。
+                            modifier = Modifier.pointerInput(Unit) {
+                                awaitEachGesture {
+                                    awaitFirstDown(requireUnconsumed = false)
+                                    do {
+                                        val event = awaitPointerEvent()
+                                    } while (event.changes.any { it.pressed })
+                                    view.performHapticFeedback(confirmHaptic)
+                                }
+                            },
+                        )
                     } else {
                         TimeInput(state = timePickerState)
                     }
