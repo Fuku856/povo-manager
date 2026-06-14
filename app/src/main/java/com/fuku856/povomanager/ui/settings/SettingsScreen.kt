@@ -2,6 +2,7 @@ package com.fuku856.povomanager.ui.settings
 
 import android.content.res.Configuration
 import android.net.Uri
+import android.view.HapticFeedbackConstants
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -48,6 +49,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -56,6 +58,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -65,6 +68,7 @@ import com.fuku856.povomanager.data.backup.ImportMode
 import com.fuku856.povomanager.data.settings.AppSettings
 import com.fuku856.povomanager.ui.common.formatPhoneNumber
 import com.fuku856.povomanager.ui.lineedit.NotifyDayChips
+import kotlinx.coroutines.flow.drop
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -314,6 +318,16 @@ private fun NotifyTimeSelector(hour: Int, minute: Int, onTimeChange: (Int, Int) 
             initialMinute = minute,
             is24Hour = true,
         )
+        // 針を動かして時/分が変わるたびに、OS標準の時計ピッカーと同じ「カチッ」という
+        // 触覚フィードバックを鳴らす。初回の値はスキップする。
+        val view = LocalView.current
+        LaunchedEffect(timePickerState) {
+            snapshotFlow { timePickerState.hour to timePickerState.minute }
+                .drop(1)
+                .collect {
+                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                }
+        }
         AlertDialog(
             onDismissRequest = { showDialog = false },
             confirmButton = {
