@@ -105,7 +105,7 @@ fun PurchaseSheet(
                     name = it
                     if (selectedPreset?.name != it) selectedPreset = null
                 },
-                label = { Text("トッピング名(自由入力可)") },
+                label = { Text("トッピング名(自由入力)") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )

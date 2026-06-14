@@ -85,7 +85,7 @@ fun HomeScreen(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("povoマネージャー") },
+                title = { Text("povo Manager") },
                 actions = {
                     IconButton(onClick = onSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "設定")

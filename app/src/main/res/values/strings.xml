@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">povoマネージャー</string>
-    <string name="widget_description">最も期限が近いpovo回線の残日数を表示します</string>
+    <string name="app_name">povo Manager</string>
+    <string name="widget_description">povo回線の残日数を表示します</string>
 </resources>

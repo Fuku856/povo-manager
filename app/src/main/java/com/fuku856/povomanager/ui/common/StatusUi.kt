@@ -40,14 +40,14 @@ fun urgencyColors(urgency: Urgency): UrgencyColors {
     }
 }
 
-/** 残日数バッジ(例: 「あと19日」「期限切れ?」「履歴なし」) */
+/** 残日数バッジ(例: 「あと19日」「期限切れ」「履歴なし」) */
 @Composable
 fun RemainingDaysBadge(daysRemaining: Long?, modifier: Modifier = Modifier) {
     val urgency = urgencyOf(daysRemaining)
     val colors = urgencyColors(urgency)
     val text = when (urgency) {
         Urgency.NONE -> "履歴なし"
-        Urgency.EXPIRED -> "期限切れ?"
+        Urgency.EXPIRED -> "期限切れ"
         else -> if (daysRemaining == 0L) "本日期限!" else "あと${daysRemaining}日"
     }
     Text(

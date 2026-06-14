@@ -3,21 +3,26 @@ package com.fuku856.povomanager.ui.settings
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.fuku856.povomanager.data.LineRepository
 import com.fuku856.povomanager.data.backup.BackupManager
 import com.fuku856.povomanager.data.backup.ImportMode
 import com.fuku856.povomanager.data.backup.ImportPreviewLine
 import com.fuku856.povomanager.data.settings.AppSettings
 import com.fuku856.povomanager.data.settings.SettingsRepository
+import com.fuku856.povomanager.domain.toStatus
 import com.fuku856.povomanager.notifications.NotificationScheduler
+import com.fuku856.povomanager.ui.common.displayName
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import javax.inject.Inject
 
 /** インポート確定前のプレビュー状態(選択済みのモードと取り込まれる回線一覧) */
@@ -27,15 +32,27 @@ data class ImportPreview(
     val lines: List<ImportPreviewLine>,
 )
 
+/** ウィジェット並び替えUI用の軽量な回線モデル */
+data class WidgetLineRow(
+    val id: Long,
+    val name: String,
+)
+
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val notificationScheduler: NotificationScheduler,
     private val backupManager: BackupManager,
+    private val lineRepository: LineRepository,
 ) : ViewModel() {
 
     val settings: StateFlow<AppSettings> = settingsRepository.settings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AppSettings())
+
+    /** ウィジェット手動並び替え用の回線一覧(DAOのsortOrder順で流れてくる) */
+    val widgetLines: StateFlow<List<WidgetLineRow>> = lineRepository.observeLinesWithPurchases()
+        .map { list -> list.map { WidgetLineRow(it.line.id, it.line.displayName) } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private val _messages = Channel<String>(Channel.BUFFERED)
     val messages = _messages.receiveAsFlow()
@@ -108,5 +125,30 @@ class SettingsViewModel @Inject constructor(
 
     fun setExpiryPeriodDays(days: Int) {
         viewModelScope.launch { settingsRepository.setExpiryPeriodDays(days) }
+    }
+
+    fun setWidgetManualOrder(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setWidgetManualOrder(enabled)
+            // 初回ON時、sortOrderが未設定(全件同値)なら現在の「期限の早い順」をシードして、
+            // 手動リストの初期並びが直前のウィジェット表示と一致するようにする。
+            if (enabled) {
+                val lines = lineRepository.getLinesWithPurchases()
+                if (lines.size > 1 && lines.map { it.line.sortOrder }.distinct().size <= 1) {
+                    val settings = settingsRepository.current()
+                    val today = LocalDate.now()
+                    val orderedIds = lines
+                        .map { it.toStatus(settings, today) }
+                        .sortedWith(compareBy(nullsLast()) { it.daysRemaining })
+                        .map { it.line.id }
+                    lineRepository.setLineOrder(orderedIds)
+                }
+            }
+        }
+    }
+
+    /** ドラッグ&ドロップ確定後の並び順を保存する。 */
+    fun commitWidgetOrder(orderedIds: List<Long>) {
+        viewModelScope.launch { lineRepository.setLineOrder(orderedIds) }
     }
 }

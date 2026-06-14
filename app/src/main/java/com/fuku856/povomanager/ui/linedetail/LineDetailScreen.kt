@@ -284,7 +284,7 @@ private fun insertCalendarEvent(context: android.content.Context, status: LineSt
         putExtra(CalendarContract.EXTRA_EVENT_ALL_DAY, true)
         putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, expiry.atStartOfDay(zone).toInstant().toEpochMilli())
         putExtra(CalendarContract.EXTRA_EVENT_END_TIME, expiry.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli())
-        putExtra(CalendarContract.Events.TITLE, "povo期限: ${status.line.displayName}")
+        putExtra(CalendarContract.Events.TITLE, "povo自動解約日: ${status.line.displayName}")
         putExtra(
             CalendarContract.Events.DESCRIPTION,
             "povo回線(${formatPhoneNumber(status.line.phoneNumber)})の自動解約日です。トッピングを購入してください。",
