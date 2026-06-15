@@ -22,6 +22,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -59,6 +61,13 @@ fun SwipeToArchiveBox(
     val offsetX = remember { Animatable(0f) }
     val shape = RoundedCornerShape(12.dp)
 
+    // offsetX.value をコンポジションで直接読むと毎フレーム再コンポーズされるため、
+    // 状態が反転したときだけ通知される derived state を経由する。
+    val canConfirm by remember(actionWidthPx) {
+        derivedStateOf { offsetX.value <= -actionWidthPx * 0.5f }
+    }
+    val isOpen by remember { derivedStateOf { offsetX.value < -1f } }
+
     fun settle(open: Boolean) {
         scope.launch { offsetX.animateTo(if (open) -actionWidthPx else 0f, tween(SwipeTuning.SettleDurationMs)) }
     }
@@ -73,7 +82,7 @@ fun SwipeToArchiveBox(
                     .width(SwipeTuning.ActionWidth)
                     .background(ArchiveGreen)
                     // 半分以上開いているときだけタップで確定(誤タップ防止)
-                    .clickable(enabled = offsetX.value <= -actionWidthPx * 0.5f) {
+                    .clickable(enabled = canConfirm) {
                         onArchive()
                         settle(open = false)
                     },
@@ -120,7 +129,7 @@ fun SwipeToArchiveBox(
             content()
             // 開いている間だけ本体上にオーバーレイを置き、タップを「閉じる」に割り当てる。
             // 閉じているときは存在しないため、カード本来のタップ(詳細遷移)はそのまま機能する。
-            if (offsetX.value < -1f) {
+            if (isOpen) {
                 Box(
                     modifier = Modifier
                         .matchParentSize()

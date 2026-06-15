@@ -86,13 +86,13 @@ fun HomeScreen(
     }
 
     LaunchedEffect(Unit) {
-        viewModel.archivedEvent.collect { line ->
+        viewModel.archivedEvent.collect { lineId ->
             val result = snackbarHostState.showSnackbar(
                 message = "アーカイブしました",
                 actionLabel = "取り消す",
             )
             if (result == SnackbarResult.ActionPerformed) {
-                viewModel.unarchive(line)
+                viewModel.unarchive(lineId)
             }
         }
     }

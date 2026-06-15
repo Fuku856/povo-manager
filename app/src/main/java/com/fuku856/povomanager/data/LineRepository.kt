@@ -24,6 +24,9 @@ class LineRepository @Inject constructor(
     fun observeArchivedLinesWithPurchases(): Flow<List<LineWithPurchases>> =
         dao.observeArchivedLinesWithPurchases()
 
+    /** アーカイブ済み件数のみを監視する(行は読み込まない) */
+    fun observeArchivedCount(): Flow<Int> = dao.observeArchivedCount()
+
     fun observeLineWithPurchases(lineId: Long): Flow<LineWithPurchases?> =
         dao.observeLineWithPurchases(lineId)
 

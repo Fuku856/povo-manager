@@ -3,7 +3,6 @@ package com.fuku856.povomanager.ui.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fuku856.povomanager.data.LineRepository
-import com.fuku856.povomanager.data.db.PovoLine
 import com.fuku856.povomanager.data.db.ToppingPurchase
 import com.fuku856.povomanager.data.settings.AppSettings
 import com.fuku856.povomanager.data.settings.SettingsRepository
@@ -37,16 +36,16 @@ class HomeViewModel @Inject constructor(
     val uiState: StateFlow<HomeUiState> =
         combine(
             repository.observeActiveLinesWithPurchases(),
-            repository.observeArchivedLinesWithPurchases(),
+            repository.observeArchivedCount(),
             settingsRepository.settings,
-        ) { lines, archived, settings ->
+        ) { lines, archivedCount, settings ->
             val today = LocalDate.now()
             HomeUiState(
                 statuses = lines
                     .map { it.toStatus(settings, today) }
                     .sortedWith(compareBy(nullsLast()) { it.daysRemaining }),
                 expiryPeriodDays = settings.expiryPeriodDays,
-                archivedCount = archived.size,
+                archivedCount = archivedCount,
                 loaded = true,
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
@@ -55,8 +54,8 @@ class HomeViewModel @Inject constructor(
     private val _purchaseAdded = Channel<ToppingPurchase>(Channel.BUFFERED)
     val purchaseAdded = _purchaseAdded.receiveAsFlow()
 
-    /** 取り消し用にアーカイブした回線を流すイベント */
-    private val _archivedEvent = Channel<PovoLine>(Channel.BUFFERED)
+    /** 取り消し用にアーカイブした回線IDを流すイベント */
+    private val _archivedEvent = Channel<Long>(Channel.BUFFERED)
     val archivedEvent = _archivedEvent.receiveAsFlow()
 
     fun recordPurchase(lineId: Long, date: LocalDate, toppingName: String, validityEndDate: LocalDate?) {
@@ -80,11 +79,15 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             val line = repository.getLine(lineId) ?: return@launch
             repository.setArchived(line, true)
-            _archivedEvent.send(line)
+            _archivedEvent.send(lineId)
         }
     }
 
-    fun unarchive(line: PovoLine) {
-        viewModelScope.launch { repository.setArchived(line, false) }
+    /** 取り消し。スナップショットではなく最新を取り直し、アーカイブ状態だけ戻す */
+    fun unarchive(lineId: Long) {
+        viewModelScope.launch {
+            val line = repository.getLine(lineId) ?: return@launch
+            repository.setArchived(line, false)
+        }
     }
 }

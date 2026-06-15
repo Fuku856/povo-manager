@@ -25,6 +25,10 @@ interface LineDao {
     @Query("SELECT * FROM lines WHERE isArchived = 1 ORDER BY sortOrder, id")
     fun observeArchivedLinesWithPurchases(): Flow<List<LineWithPurchases>>
 
+    /** アーカイブ済み件数。ホームの「アーカイブ済みを表示」ボタン表示判定用(行は読み込まない) */
+    @Query("SELECT COUNT(*) FROM lines WHERE isArchived = 1")
+    fun observeArchivedCount(): Flow<Int>
+
     @Transaction
     @Query("SELECT * FROM lines WHERE id = :lineId")
     fun observeLineWithPurchases(lineId: Long): Flow<LineWithPurchases?>
