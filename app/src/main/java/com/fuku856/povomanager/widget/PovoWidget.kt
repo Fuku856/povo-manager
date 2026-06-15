@@ -2,7 +2,6 @@ package com.fuku856.povomanager.widget
 
 import android.content.Context
 import android.content.Intent
-import android.content.res.Configuration
 import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
@@ -22,6 +21,7 @@ import androidx.glance.appwidget.lazy.items
 import androidx.glance.appwidget.provideContent
 import androidx.glance.action.clickable
 import androidx.glance.background
+import androidx.glance.color.ColorProvider as dayNightColorProvider
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
@@ -201,10 +201,9 @@ private data class ChipColors(val container: ColorProvider, val content: ColorPr
  */
 @Composable
 private fun chipColors(daysRemaining: Long?): ChipColors {
-    // Glance 1.1.1 の ColorProvider に day/night 一括指定が無いため、現在の夜間モードを見て色を選ぶ。
-    val dark = (LocalContext.current.resources.configuration.uiMode and
-        Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-    fun provider(light: Color, night: Color) = ColorProvider(if (dark) night else light)
+    // day/night を持つ ColorProvider(androidx.glance.color)でラップし、夜間モードの切り替えは
+    // システムに任せる(自前で uiMode を判定しない)。
+    fun provider(light: Color, night: Color) = dayNightColorProvider(day = light, night = night)
     return when (urgencyOf(daysRemaining)) {
         Urgency.NONE ->
             ChipColors(GlanceTheme.colors.surfaceVariant, GlanceTheme.colors.onSurfaceVariant)

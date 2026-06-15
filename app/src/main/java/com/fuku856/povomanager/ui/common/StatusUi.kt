@@ -104,6 +104,8 @@ fun ExpiryProgressBar(
     modifier: Modifier = Modifier,
 ) {
     // expiryPeriodDays は通常180だが、0が来るとNaN(coerceInも素通り)になるため防御する。
+    // daysRemaining=0(本日期限)では progress=0 でバーが空になるが、これは意図通り
+    // (残り0%を表す)。「本日期限!」バッジが併記されるため空バーでも状態は伝わる。
     val progress = (daysRemaining.toFloat() / expiryPeriodDays.coerceAtLeast(1)).coerceIn(0f, 1f)
     val colors = urgencyColors(urgencyOf(daysRemaining))
     LinearProgressIndicator(
