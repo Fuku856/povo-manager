@@ -35,7 +35,11 @@ jobs:
         id: claude-review
         uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # /install-github-app で発行される Claude サブスク用 OAuth トークンを使う。
+          # (旧 ANTHROPIC_API_KEY は失効/残高不足で1ターン目に即エラーになっていた)
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # モデルを明示しないと最新(Opus 4.8)が選ばれることがあるため、利用可能なモデルを固定する。
+          claude_args: '--model claude-sonnet-4-6'
           plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
           plugins: 'code-review@claude-code-plugins'
           prompt: '/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
