@@ -51,19 +51,12 @@ jobs:
                   content:($sys + "\n\n以下が GitHub 自動生成のリリースノートです:\n\n" + $notes)}]}' > payload.json
 
             # OAuth トークンは x-api-key ではなく Authorization: Bearer ＋ oauth ベータヘッダーを使う。
-            http_code=$(curl -sS -o resp.json -w '%{http_code}' https://api.anthropic.com/v1/messages \
+            resp=$(curl -sS https://api.anthropic.com/v1/messages \
               -H "Authorization: Bearer $CLAUDE_CODE_OAUTH_TOKEN" \
               -H "anthropic-version: 2023-06-01" \
               -H "anthropic-beta: oauth-2025-04-20" \
               -H "content-type: application/json" \
-              -d @payload.json || echo "000")
-            # [一時診断] HTTP ステータスと本文をログに出す(トークンは GitHub が自動マスク)。
-            echo "::group::Claude API diagnostic"
-            echo "HTTP status: $http_code"
-            head -c 2000 resp.json || true
-            echo
-            echo "::endgroup::"
-            resp=$(cat resp.json)
+              -d @payload.json || true)
             # 成功時のみ text ブロックを取り出す。失敗・空応答なら summary は空のまま。
             summary=$(printf '%s' "$resp" \
               | jq -r '[.content[]? | select(.type=="text") | .text] | join("")' 2>/dev/null || true)
