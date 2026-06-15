@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.fuku856.povomanager.data.LineRepository
 import com.fuku856.povomanager.data.db.ToppingPurchase
+import com.fuku856.povomanager.data.settings.AppSettings
 import com.fuku856.povomanager.data.settings.SettingsRepository
 import com.fuku856.povomanager.domain.LineStatus
 import com.fuku856.povomanager.domain.toStatus
@@ -25,7 +26,7 @@ data class LineDetailUiState(
     val loaded: Boolean = false,
     /** nullなら回線が存在しない(削除済み) */
     val status: LineStatus? = null,
-    val expiryPeriodDays: Int = 180,
+    val expiryPeriodDays: Int = AppSettings.DEFAULT_EXPIRY_PERIOD_DAYS,
 )
 
 sealed interface PurchaseEvent {

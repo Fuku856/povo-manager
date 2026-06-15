@@ -103,7 +103,8 @@ fun ExpiryProgressBar(
     expiryPeriodDays: Int,
     modifier: Modifier = Modifier,
 ) {
-    val progress = (daysRemaining.toFloat() / expiryPeriodDays).coerceIn(0f, 1f)
+    // expiryPeriodDays は通常180だが、0が来るとNaN(coerceInも素通り)になるため防御する。
+    val progress = (daysRemaining.toFloat() / expiryPeriodDays.coerceAtLeast(1)).coerceIn(0f, 1f)
     val colors = urgencyColors(urgencyOf(daysRemaining))
     LinearProgressIndicator(
         progress = { progress },
