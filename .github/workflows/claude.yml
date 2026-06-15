@@ -34,10 +34,11 @@ jobs:
         id: claude
         uses: anthropics/claude-code-action@v1
         with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # /install-github-app で発行される Claude サブスク用 OAuth トークンを使う。
+          # (旧 ANTHROPIC_API_KEY は失効/残高不足で1ターン目に即エラーになっていた)
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
-          # モデルを明示しないと最新(Opus 4.8)が選ばれ、APIキーが未対応の場合に
-          # 1ターン目で即エラーになり応答が投稿されない。利用可能なモデルを固定する。
+          # モデルを明示しないと最新(Opus 4.8)が選ばれることがあるため、利用可能なモデルを固定する。
           claude_args: '--model claude-sonnet-4-6'
 
           # This is an optional setting that allows Claude to read CI results on PRs
