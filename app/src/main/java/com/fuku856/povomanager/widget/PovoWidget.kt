@@ -67,7 +67,8 @@ class PovoWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val entryPoint = EntryPointAccessors.fromApplication(context, WidgetEntryPoint::class.java)
-        val lines = entryPoint.lineRepository().getLinesWithPurchases()
+        // アーカイブ済み回線はウィジェットからも除外する
+        val lines = entryPoint.lineRepository().getActiveLinesWithPurchases()
         val settings = entryPoint.settingsRepository().current()
         val today = LocalDate.now()
         val statuses = lines.map { it.toStatus(settings, today) }

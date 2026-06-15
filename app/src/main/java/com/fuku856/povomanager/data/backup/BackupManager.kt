@@ -41,6 +41,7 @@ data class BackupLine(
     val memo: String? = null,
     val notifyDaysOverride: List<Int>? = null,
     val sortOrder: Int = 0,
+    val isArchived: Boolean = false,
     val purchases: List<BackupPurchase> = emptyList(),
 )
 
@@ -122,6 +123,7 @@ class BackupManager @Inject constructor(
         memo = line.memo,
         notifyDaysOverride = line.notifyDaysOverride?.toList(),
         sortOrder = line.sortOrder,
+        isArchived = line.isArchived,
         purchases = purchases.map {
             BackupPurchase(
                 purchaseDate = it.purchaseDate.toString(),
@@ -138,6 +140,7 @@ class BackupManager @Inject constructor(
             memo = memo,
             notifyDaysOverride = notifyDaysOverride?.toSet(),
             sortOrder = sortOrder,
+            isArchived = isArchived,
         ),
         purchases = purchases.map {
             ToppingPurchase(

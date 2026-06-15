@@ -15,6 +15,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import com.fuku856.povomanager.ui.archived.ArchivedLinesScreen
 import com.fuku856.povomanager.ui.home.HomeScreen
 import com.fuku856.povomanager.ui.lineedit.LineEditScreen
 import com.fuku856.povomanager.ui.linedetail.LineDetailScreen
@@ -23,6 +24,9 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data object HomeRoute
+
+@Serializable
+data object ArchivedRoute
 
 @Serializable
 data class LineDetailRoute(val lineId: Long)
@@ -70,6 +74,13 @@ fun PovoApp(deepLinkLineId: Long? = null, onDeepLinkConsumed: () -> Unit = {}) {
                 onLineClick = { navController.navigate(LineDetailRoute(it)) },
                 onAddLine = { navController.navigate(LineEditRoute()) },
                 onSettings = { navController.navigate(SettingsRoute) },
+                onShowArchived = { navController.navigate(ArchivedRoute) },
+            )
+        }
+        composable<ArchivedRoute> {
+            ArchivedLinesScreen(
+                onBack = { navController.popBackStack() },
+                onLineClick = { navController.navigate(LineDetailRoute(it)) },
             )
         }
         composable<LineDetailRoute> { backStackEntry ->

@@ -16,10 +16,25 @@ class LineRepository @Inject constructor(
 ) {
     fun observeLinesWithPurchases(): Flow<List<LineWithPurchases>> = dao.observeLinesWithPurchases()
 
+    /** ホーム表示用。アーカイブ済みは除外 */
+    fun observeActiveLinesWithPurchases(): Flow<List<LineWithPurchases>> =
+        dao.observeActiveLinesWithPurchases()
+
+    /** アーカイブ済み一覧画面用 */
+    fun observeArchivedLinesWithPurchases(): Flow<List<LineWithPurchases>> =
+        dao.observeArchivedLinesWithPurchases()
+
+    /** アーカイブ済み件数のみを監視する(行は読み込まない) */
+    fun observeArchivedCount(): Flow<Int> = dao.observeArchivedCount()
+
     fun observeLineWithPurchases(lineId: Long): Flow<LineWithPurchases?> =
         dao.observeLineWithPurchases(lineId)
 
     suspend fun getLinesWithPurchases(): List<LineWithPurchases> = dao.getLinesWithPurchases()
+
+    /** 通知・ウィジェット用。アーカイブ済みは除外 */
+    suspend fun getActiveLinesWithPurchases(): List<LineWithPurchases> =
+        dao.getActiveLinesWithPurchases()
 
     suspend fun getLine(lineId: Long): PovoLine? = dao.getLine(lineId)
 
@@ -34,6 +49,11 @@ class LineRepository @Inject constructor(
     suspend fun deleteLine(line: PovoLine) {
         dao.deleteLine(line)
         widgetUpdater.updateAll()
+    }
+
+    /** 回線のアーカイブ状態を変更する。updateLine 内でウィジェットも更新される。 */
+    suspend fun setArchived(line: PovoLine, archived: Boolean) {
+        updateLine(line.copy(isArchived = archived))
     }
 
     /** ウィジェットの手動並び替え順を保存する。リストの並び順を sortOrder として書き込む。 */

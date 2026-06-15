@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddShoppingCart
+import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.SimCard
 import androidx.compose.material3.Card
@@ -33,6 +34,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -47,9 +49,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.fuku856.povomanager.domain.LineStatus
+import com.fuku856.povomanager.ui.common.ArchiveGreen
 import com.fuku856.povomanager.ui.common.ExpiryProgressBar
 import com.fuku856.povomanager.ui.common.PurchaseSheet
 import com.fuku856.povomanager.ui.common.RemainingDaysBadge
+import com.fuku856.povomanager.ui.common.SwipeToArchiveBox
 import com.fuku856.povomanager.ui.common.displayName
 import com.fuku856.povomanager.ui.common.formatPhoneNumber
 import com.fuku856.povomanager.ui.common.toDisplayString
@@ -62,6 +66,7 @@ fun HomeScreen(
     onLineClick: (Long) -> Unit,
     onAddLine: () -> Unit,
     onSettings: () -> Unit,
+    onShowArchived: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -76,6 +81,18 @@ fun HomeScreen(
             )
             if (result == SnackbarResult.ActionPerformed) {
                 viewModel.undoPurchase(purchase)
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.archivedEvent.collect { lineId ->
+            val result = snackbarHostState.showSnackbar(
+                message = "アーカイブしました",
+                actionLabel = "取り消す",
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                viewModel.unarchive(lineId)
             }
         }
     }
@@ -109,12 +126,22 @@ fun HomeScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 items(uiState.statuses, key = { it.line.id }) { status ->
-                    LineCard(
-                        status = status,
-                        expiryPeriodDays = uiState.expiryPeriodDays,
-                        onClick = { onLineClick(status.line.id) },
-                        onRecordPurchase = { purchaseTargetLineId = status.line.id },
-                    )
+                    SwipeToArchiveBox(onArchive = { viewModel.archiveLine(status.line.id) }) {
+                        LineCard(
+                            status = status,
+                            expiryPeriodDays = uiState.expiryPeriodDays,
+                            onClick = { onLineClick(status.line.id) },
+                            onRecordPurchase = { purchaseTargetLineId = status.line.id },
+                        )
+                    }
+                }
+                if (uiState.archivedCount > 0) {
+                    item(key = "archived-button") {
+                        ShowArchivedButton(
+                            count = uiState.archivedCount,
+                            onClick = onShowArchived,
+                        )
+                    }
                 }
             }
         }
@@ -202,6 +229,17 @@ private fun LineCard(
                 Spacer(Modifier.width(8.dp))
                 Text("購入を記録")
             }
+        }
+    }
+}
+
+@Composable
+private fun ShowArchivedButton(count: Int, onClick: () -> Unit) {
+    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        TextButton(onClick = onClick) {
+            Icon(Icons.Default.Archive, contentDescription = null, tint = ArchiveGreen, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("アーカイブ($count)")
         }
     }
 }
