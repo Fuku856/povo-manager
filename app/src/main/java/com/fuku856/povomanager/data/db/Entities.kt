@@ -19,6 +19,8 @@ data class PovoLine(
     val notifyDaysOverride: Set<Int>? = null,
     val memo: String? = null,
     val sortOrder: Int = 0,
+    /** アーカイブ済みか。trueの間はホーム一覧・ウィジェット・通知から除外される */
+    val isArchived: Boolean = false,
 )
 
 @Entity(

@@ -15,6 +15,16 @@ interface LineDao {
     @Query("SELECT * FROM lines ORDER BY sortOrder, id")
     fun observeLinesWithPurchases(): Flow<List<LineWithPurchases>>
 
+    /** ホーム表示用。アーカイブ済みは除外 */
+    @Transaction
+    @Query("SELECT * FROM lines WHERE isArchived = 0 ORDER BY sortOrder, id")
+    fun observeActiveLinesWithPurchases(): Flow<List<LineWithPurchases>>
+
+    /** アーカイブ済み一覧画面用 */
+    @Transaction
+    @Query("SELECT * FROM lines WHERE isArchived = 1 ORDER BY sortOrder, id")
+    fun observeArchivedLinesWithPurchases(): Flow<List<LineWithPurchases>>
+
     @Transaction
     @Query("SELECT * FROM lines WHERE id = :lineId")
     fun observeLineWithPurchases(lineId: Long): Flow<LineWithPurchases?>
@@ -22,6 +32,11 @@ interface LineDao {
     @Transaction
     @Query("SELECT * FROM lines ORDER BY sortOrder, id")
     suspend fun getLinesWithPurchases(): List<LineWithPurchases>
+
+    /** 通知・ウィジェット用。アーカイブ済みは除外 */
+    @Transaction
+    @Query("SELECT * FROM lines WHERE isArchived = 0 ORDER BY sortOrder, id")
+    suspend fun getActiveLinesWithPurchases(): List<LineWithPurchases>
 
     @Query("SELECT * FROM lines WHERE id = :lineId")
     suspend fun getLine(lineId: Long): PovoLine?

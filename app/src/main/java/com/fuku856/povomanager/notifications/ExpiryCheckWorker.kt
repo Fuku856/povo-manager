@@ -28,7 +28,8 @@ class ExpiryCheckWorker @AssistedInject constructor(
     override suspend fun doWork(): Result {
         val settings = settingsRepository.current()
         val today = LocalDate.now()
-        repository.getLinesWithPurchases().forEach { lineWithPurchases ->
+        // アーカイブ済み回線は通知対象外(期限切れの毎日通知を止めるのが本機能の目的)
+        repository.getActiveLinesWithPurchases().forEach { lineWithPurchases ->
             val status = lineWithPurchases.toStatus(settings, today)
             if (shouldNotifyExpiry(status, settings)) {
                 notificationHelper.notifyExpiry(status)
