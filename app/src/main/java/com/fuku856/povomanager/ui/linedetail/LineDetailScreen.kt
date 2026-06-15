@@ -53,6 +53,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.fuku856.povomanager.data.db.ToppingPurchase
 import com.fuku856.povomanager.domain.LineStatus
+import com.fuku856.povomanager.ui.common.ExpiryProgressBar
 import com.fuku856.povomanager.ui.common.PurchaseSheet
 import com.fuku856.povomanager.ui.common.RemainingDaysBadge
 import com.fuku856.povomanager.ui.common.displayName
@@ -126,7 +127,7 @@ fun LineDetailScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item { StatusCard(status) }
+            item { StatusCard(status, uiState.expiryPeriodDays) }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilledTonalButton(onClick = { showAddSheet = true }) {
@@ -193,7 +194,7 @@ fun LineDetailScreen(
 }
 
 @Composable
-private fun StatusCard(status: LineStatus) {
+private fun StatusCard(status: LineStatus, expiryPeriodDays: Int) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -218,6 +219,13 @@ private fun StatusCard(status: LineStatus) {
             }
             Spacer(Modifier.height(12.dp))
             if (status.expiryDate != null) {
+                if (status.daysRemaining != null) {
+                    ExpiryProgressBar(
+                        daysRemaining = status.daysRemaining,
+                        expiryPeriodDays = expiryPeriodDays,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                }
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Column {
                         Text("最終購入日", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

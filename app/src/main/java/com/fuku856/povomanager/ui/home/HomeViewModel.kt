@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fuku856.povomanager.data.LineRepository
 import com.fuku856.povomanager.data.db.ToppingPurchase
+import com.fuku856.povomanager.data.settings.AppSettings
 import com.fuku856.povomanager.data.settings.SettingsRepository
 import com.fuku856.povomanager.domain.LineStatus
 import com.fuku856.povomanager.domain.toStatus
@@ -20,7 +21,7 @@ import javax.inject.Inject
 
 data class HomeUiState(
     val statuses: List<LineStatus> = emptyList(),
-    val expiryPeriodDays: Int = 180,
+    val expiryPeriodDays: Int = AppSettings.DEFAULT_EXPIRY_PERIOD_DAYS,
     val loaded: Boolean = false,
 )
 

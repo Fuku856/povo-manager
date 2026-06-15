@@ -27,7 +27,6 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -48,13 +47,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.fuku856.povomanager.domain.LineStatus
+import com.fuku856.povomanager.ui.common.ExpiryProgressBar
 import com.fuku856.povomanager.ui.common.PurchaseSheet
 import com.fuku856.povomanager.ui.common.RemainingDaysBadge
 import com.fuku856.povomanager.ui.common.displayName
 import com.fuku856.povomanager.ui.common.formatPhoneNumber
 import com.fuku856.povomanager.ui.common.toDisplayString
-import com.fuku856.povomanager.ui.common.urgencyColors
-import com.fuku856.povomanager.ui.common.urgencyOf
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
@@ -167,13 +165,9 @@ private fun LineCard(
             Spacer(Modifier.height(12.dp))
 
             if (status.expiryDate != null && status.daysRemaining != null) {
-                val progress = (status.daysRemaining.toFloat() / expiryPeriodDays).coerceIn(0f, 1f)
-                val colors = urgencyColors(urgencyOf(status.daysRemaining))
-                LinearProgressIndicator(
-                    progress = { progress },
-                    modifier = Modifier.fillMaxWidth(),
-                    color = colors.content,
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                ExpiryProgressBar(
+                    daysRemaining = status.daysRemaining,
+                    expiryPeriodDays = expiryPeriodDays,
                 )
                 Spacer(Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
