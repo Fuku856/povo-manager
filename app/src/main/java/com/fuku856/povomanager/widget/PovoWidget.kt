@@ -2,8 +2,10 @@ package com.fuku856.povomanager.widget
 
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.net.Uri
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
@@ -40,7 +42,10 @@ import com.fuku856.povomanager.data.settings.SettingsRepository
 import com.fuku856.povomanager.domain.LineStatus
 import com.fuku856.povomanager.domain.toStatus
 import com.fuku856.povomanager.notifications.NotificationHelper
+import com.fuku856.povomanager.ui.common.Urgency
+import com.fuku856.povomanager.ui.common.UrgencyPalette
 import com.fuku856.povomanager.ui.common.displayName
+import com.fuku856.povomanager.ui.common.urgencyOf
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
@@ -188,12 +193,37 @@ private fun remainingText(daysRemaining: Long?): String = when {
 
 private data class ChipColors(val container: ColorProvider, val content: ColorProvider)
 
+/**
+ * チップ配色。アプリ本体([com.fuku856.povomanager.ui.common.urgencyColors])と
+ * 同じ残日数バンド・同じパレットで4段階に色分けする。
+ * 緑/黄/橙は [UrgencyPalette] の固定色を day/night 指定でラップ(Glanceテーマに該当色がないため)。
+ * 赤(DANGER/EXPIRED)はテーマ依存の errorContainer を継続。
+ */
 @Composable
-private fun chipColors(daysRemaining: Long?): ChipColors = when {
-    daysRemaining == null ->
-        ChipColors(GlanceTheme.colors.surfaceVariant, GlanceTheme.colors.onSurfaceVariant)
-    daysRemaining <= 7 ->
-        ChipColors(GlanceTheme.colors.errorContainer, GlanceTheme.colors.onErrorContainer)
-    else ->
-        ChipColors(GlanceTheme.colors.primaryContainer, GlanceTheme.colors.onPrimaryContainer)
+private fun chipColors(daysRemaining: Long?): ChipColors {
+    // Glance 1.1.1 の ColorProvider に day/night 一括指定が無いため、現在の夜間モードを見て色を選ぶ。
+    val dark = (LocalContext.current.resources.configuration.uiMode and
+        Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+    fun provider(light: Color, night: Color) = ColorProvider(if (dark) night else light)
+    return when (urgencyOf(daysRemaining)) {
+        Urgency.NONE ->
+            ChipColors(GlanceTheme.colors.surfaceVariant, GlanceTheme.colors.onSurfaceVariant)
+        Urgency.SAFE ->
+            ChipColors(
+                provider(UrgencyPalette.SafeContainerLight, UrgencyPalette.SafeContainerDark),
+                provider(UrgencyPalette.SafeContentLight, UrgencyPalette.SafeContentDark),
+            )
+        Urgency.WARNING ->
+            ChipColors(
+                provider(UrgencyPalette.WarningContainerLight, UrgencyPalette.WarningContainerDark),
+                provider(UrgencyPalette.WarningContentLight, UrgencyPalette.WarningContentDark),
+            )
+        Urgency.ALERT ->
+            ChipColors(
+                provider(UrgencyPalette.AlertContainerLight, UrgencyPalette.AlertContainerDark),
+                provider(UrgencyPalette.AlertContentLight, UrgencyPalette.AlertContentDark),
+            )
+        Urgency.DANGER, Urgency.EXPIRED ->
+            ChipColors(GlanceTheme.colors.errorContainer, GlanceTheme.colors.onErrorContainer)
+    }
 }

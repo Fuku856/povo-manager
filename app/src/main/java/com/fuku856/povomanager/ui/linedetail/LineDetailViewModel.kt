@@ -25,6 +25,7 @@ data class LineDetailUiState(
     val loaded: Boolean = false,
     /** nullなら回線が存在しない(削除済み) */
     val status: LineStatus? = null,
+    val expiryPeriodDays: Int = 180,
 )
 
 sealed interface PurchaseEvent {
@@ -43,7 +44,11 @@ class LineDetailViewModel @Inject constructor(
 
     val uiState: StateFlow<LineDetailUiState> =
         combine(repository.observeLineWithPurchases(lineId), settingsRepository.settings) { line, settings ->
-            LineDetailUiState(loaded = true, status = line?.toStatus(settings, LocalDate.now()))
+            LineDetailUiState(
+                loaded = true,
+                status = line?.toStatus(settings, LocalDate.now()),
+                expiryPeriodDays = settings.expiryPeriodDays,
+            )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LineDetailUiState())
 
     private val _events = Channel<PurchaseEvent>(Channel.BUFFERED)
