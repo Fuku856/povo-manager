@@ -36,6 +36,10 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 
+          # モデルを明示しないと最新(Opus 4.8)が選ばれ、APIキーが未対応の場合に
+          # 1ターン目で即エラーになり応答が投稿されない。利用可能なモデルを固定する。
+          claude_args: '--model claude-sonnet-4-6'
+
           # This is an optional setting that allows Claude to read CI results on PRs
           additional_permissions: |
             actions: read
