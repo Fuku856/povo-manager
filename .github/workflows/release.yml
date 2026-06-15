@@ -34,11 +34,11 @@ jobs:
           summary=""
           if [ -n "$ANTHROPIC_API_KEY" ]; then
             # $'...' で改行(\n)を含む1行文字列にし、YAML ブロックのインデントを崩さない。
-            system=$'あなたは Android アプリ「povo Manager」のリリース担当です。以下は GitHub が自動生成したリリースノート(PR 一覧)です。これを読み、アプリの利用者(エンドユーザー)向けに、今回の変更点を日本語の箇条書きで要約してください。\n\n出力ルール:\n- Markdown のみを出力し、前置きや結びの文章は書かない。\n- 見出しは「### ✨ 新機能」「### 🛠 改善・修正」の 2 つを使う(該当する変更が無い見出しは省略)。\n- 各項目は利用者目線の平易な日本語にし、PR タイトルをそのまま転記しない。\n- CI / GitHub Actions / ドキュメント等、利用者に関係しない内部的な変更は要約に含めない。\n- 各見出しの項目は最大 6 個程度に収め、重要なものを優先する。'
+            system=$'あなたは Android アプリ「povo Manager」のリリース担当です。以下は GitHub が自動生成したリリースノート(PR 一覧)です。これを読み、アプリの利用者(エンドユーザー)向けに、今回の変更点を日本語の箇条書きで要約してください。\n\n出力ルール:\n- Markdown のみを出力し、前置きや結びの文章は書かない。\n- 見出しは「### 新機能」「### 改善・修正」の 2 つを使う(該当する変更が無い見出しは省略)。\n- 絵文字は一切使わない。\n- 各項目は利用者目線の平易な日本語にし、PR タイトルをそのまま転記しない。\n- CI / GitHub Actions / ドキュメント等、利用者に関係しない内部的な変更は要約に含めない。\n- 各見出しの項目は最大 6 個程度に収め、重要なものを優先する。'
 
             # jq でペイロードを安全に組み立てる(改行や記号を含む notes をそのまま埋め込む)
             jq -n --arg sys "$system" --arg notes "$notes" \
-              '{model:"claude-opus-4-8", max_tokens:1500, system:$sys,
+              '{model:"claude-sonnet-4-6", max_tokens:1500, system:$sys,
                 messages:[{role:"user", content:$notes}]}' > payload.json
 
             resp=$(curl -sS https://api.anthropic.com/v1/messages \
@@ -55,7 +55,7 @@ jobs:
           # 要約が得られたら先頭に差し込み、区切り線を挟んで従来の一覧を続ける。
           if [ -n "$summary" ]; then
             {
-              echo "## 📝 今回の主な変更点"
+              echo "## $TAG の変更点"
               echo
               printf '%s\n' "$summary"
               echo
