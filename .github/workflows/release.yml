@@ -9,7 +9,8 @@ permissions:
   contents: write # リリースアセットのアップロードに必要
 
 jobs:
-  # コミット/PR から変更履歴(Changelog)を自動生成し、本文を常に上書きする
+  # コミット/PR から変更履歴(Changelog)を自動生成し、本文を常に上書きする。
+  # さらに PR 一覧を Claude に渡して、利用者向けの新機能/修正点の要約を先頭に付ける。
   release-notes:
     runs-on: ubuntu-latest
     steps:
@@ -18,6 +19,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.release.tag_name }}
           REPO: ${{ github.repository }}
+          # 要約生成に使用。未設定でも従来の自動生成 changelog は出力される。
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           # 本文の有無に関わらず、毎回自動生成した変更履歴で上書きする。
           notes=$(gh api -X POST "repos/$REPO/releases/generate-notes" \
@@ -25,7 +28,45 @@ jobs:
           # API が空 body を返した場合(タグ間コミット 0 件など)はスキップ。
           # 空ファイルで gh release edit するとリリース本文が消えるため。
           [ -n "$notes" ] || { echo "generate-notes returned empty body; skipping."; exit 0; }
-          printf '%s' "$notes" > notes.md
+
+          # --- Claude で利用者向けの要約(新機能/改善・修正)を生成 ---
+          # API キーが無い/呼び出しに失敗した場合は要約を諦め、従来の一覧のみで続行する。
+          summary=""
+          if [ -n "$ANTHROPIC_API_KEY" ]; then
+            # $'...' で改行(\n)を含む1行文字列にし、YAML ブロックのインデントを崩さない。
+            system=$'あなたは Android アプリ「povo Manager」のリリース担当です。以下は GitHub が自動生成したリリースノート(PR 一覧)です。これを読み、アプリの利用者(エンドユーザー)向けに、今回の変更点を日本語の箇条書きで要約してください。\n\n出力ルール:\n- Markdown のみを出力し、前置きや結びの文章は書かない。\n- 見出しは「### ✨ 新機能」「### 🛠 改善・修正」の 2 つを使う(該当する変更が無い見出しは省略)。\n- 各項目は利用者目線の平易な日本語にし、PR タイトルをそのまま転記しない。\n- CI / GitHub Actions / ドキュメント等、利用者に関係しない内部的な変更は要約に含めない。\n- 各見出しの項目は最大 6 個程度に収め、重要なものを優先する。'
+
+            # jq でペイロードを安全に組み立てる(改行や記号を含む notes をそのまま埋め込む)
+            jq -n --arg sys "$system" --arg notes "$notes" \
+              '{model:"claude-opus-4-8", max_tokens:1500, system:$sys,
+                messages:[{role:"user", content:$notes}]}' > payload.json
+
+            resp=$(curl -sS https://api.anthropic.com/v1/messages \
+              -H "x-api-key: $ANTHROPIC_API_KEY" \
+              -H "anthropic-version: 2023-06-01" \
+              -H "content-type: application/json" \
+              -d @payload.json || true)
+            # 成功時のみ text ブロックを取り出す。失敗・空応答なら summary は空のまま。
+            summary=$(printf '%s' "$resp" \
+              | jq -r '[.content[]? | select(.type=="text") | .text] | join("")' 2>/dev/null || true)
+            [ "$summary" = "null" ] && summary=""
+          fi
+
+          # 要約が得られたら先頭に差し込み、区切り線を挟んで従来の一覧を続ける。
+          if [ -n "$summary" ]; then
+            {
+              echo "## 📝 今回の主な変更点"
+              echo
+              printf '%s\n' "$summary"
+              echo
+              echo "---"
+              echo
+              printf '%s\n' "$notes"
+            } > notes.md
+          else
+            printf '%s' "$notes" > notes.md
+          fi
+
           # このジョブは checkout していないため、--repo でリポジトリを明示する
           # (省略すると gh が git からリポジトリを特定できず失敗する)
           gh release edit "$TAG" --repo "$REPO" --notes-file notes.md
