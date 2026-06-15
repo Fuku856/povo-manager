@@ -19,8 +19,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.release.tag_name }}
           REPO: ${{ github.repository }}
-          # 要約生成に使用。未設定でも従来の自動生成 changelog は出力される。
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # 要約生成に使用。Claude Pro/Max サブスクの OAuth トークン(API クレジット不要)。
+          # 未設定でも従来の自動生成 changelog は出力される。
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: |
           # 本文の有無に関わらず、毎回自動生成した変更履歴で上書きする。
           notes=$(gh api -X POST "repos/$REPO/releases/generate-notes" \
@@ -30,20 +31,27 @@ jobs:
           [ -n "$notes" ] || { echo "generate-notes returned empty body; skipping."; exit 0; }
 
           # --- Claude で利用者向けの要約(新機能/改善・修正)を生成 ---
-          # API キーが無い/呼び出しに失敗した場合は要約を諦め、従来の一覧のみで続行する。
+          # トークンが無い/呼び出しに失敗した場合は要約を諦め、従来の一覧のみで続行する。
           summary=""
-          if [ -n "$ANTHROPIC_API_KEY" ]; then
+          if [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
             # $'...' で改行(\n)を含む1行文字列にし、YAML ブロックのインデントを崩さない。
             system=$'あなたは Android アプリ「povo Manager」のリリース担当です。以下は GitHub が自動生成したリリースノート(PR 一覧)です。これを読み、アプリの利用者(エンドユーザー)向けに、今回の変更点を日本語の箇条書きで要約してください。\n\n出力ルール:\n- Markdown のみを出力し、前置きや結びの文章は書かない。\n- 見出しは「### 新機能」「### 改善・修正」の 2 つを使う(該当する変更が無い見出しは省略)。\n- 絵文字は一切使わない。\n- 各項目は利用者目線の平易な日本語にし、PR タイトルをそのまま転記しない。\n- CI / GitHub Actions / ドキュメント等、利用者に関係しない内部的な変更は要約に含めない。\n- 各見出しの項目は最大 6 個程度に収め、重要なものを優先する。'
 
+            # OAuth トークン(Claude Code)で /v1/messages を使う場合、システムの先頭ブロックに
+            # Claude Code の識別文が必要。実際の指示はそれに続く 2 番目のブロックに入れる。
+            identity="You are Claude Code, Anthropic's official CLI for Claude."
+
             # jq でペイロードを安全に組み立てる(改行や記号を含む notes をそのまま埋め込む)
-            jq -n --arg sys "$system" --arg notes "$notes" \
-              '{model:"claude-sonnet-4-6", max_tokens:1500, system:$sys,
+            jq -n --arg id "$identity" --arg sys "$system" --arg notes "$notes" \
+              '{model:"claude-sonnet-4-6", max_tokens:1500,
+                system:[{type:"text", text:$id}, {type:"text", text:$sys}],
                 messages:[{role:"user", content:$notes}]}' > payload.json
 
+            # OAuth トークンは x-api-key ではなく Authorization: Bearer ＋ oauth ベータヘッダーを使う。
             resp=$(curl -sS https://api.anthropic.com/v1/messages \
-              -H "x-api-key: $ANTHROPIC_API_KEY" \
+              -H "Authorization: Bearer $CLAUDE_CODE_OAUTH_TOKEN" \
               -H "anthropic-version: 2023-06-01" \
+              -H "anthropic-beta: oauth-2025-04-20" \
               -H "content-type: application/json" \
               -d @payload.json || true)
             # 成功時のみ text ブロックを取り出す。失敗・空応答なら summary は空のまま。
