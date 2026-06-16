@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddShoppingCart
@@ -30,7 +31,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
@@ -53,6 +53,7 @@ import com.fuku856.povomanager.ui.common.ArchiveGreen
 import com.fuku856.povomanager.ui.common.ExpiryProgressBar
 import com.fuku856.povomanager.ui.common.PurchaseSheet
 import com.fuku856.povomanager.ui.common.RemainingDaysBadge
+import com.fuku856.povomanager.ui.common.SwipeDismissSnackbarHost
 import com.fuku856.povomanager.ui.common.SwipeToArchiveBox
 import com.fuku856.povomanager.ui.common.displayName
 import com.fuku856.povomanager.ui.common.formatPhoneNumber
@@ -115,18 +116,27 @@ fun HomeScreen(
                 text = { Text("回線を追加") },
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { SwipeDismissSnackbarHost(snackbarHostState) },
     ) { innerPadding ->
         if (uiState.loaded && uiState.statuses.isEmpty()) {
-            EmptyState(modifier = Modifier.fillMaxSize().padding(innerPadding))
+            EmptyState(
+                modifier = Modifier.fillMaxSize().padding(innerPadding),
+                archivedCount = uiState.archivedCount,
+                onShowArchived = onShowArchived,
+            )
         } else {
+            val listState = rememberLazyListState()
             LazyColumn(
+                state = listState,
                 modifier = Modifier.fillMaxSize().padding(innerPadding),
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 items(uiState.statuses, key = { it.line.id }) { status ->
-                    SwipeToArchiveBox(onArchive = { viewModel.archiveLine(status.line.id) }) {
+                    SwipeToArchiveBox(
+                        onArchive = { viewModel.archiveLine(status.line.id) },
+                        scrollInProgress = { listState.isScrollInProgress },
+                    ) {
                         LineCard(
                             status = status,
                             expiryPeriodDays = uiState.expiryPeriodDays,
@@ -253,7 +263,11 @@ private fun LabeledDate(label: String, date: LocalDate?) {
 }
 
 @Composable
-private fun EmptyState(modifier: Modifier = Modifier) {
+private fun EmptyState(
+    modifier: Modifier = Modifier,
+    archivedCount: Int = 0,
+    onShowArchived: () -> Unit = {},
+) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(
@@ -271,6 +285,11 @@ private fun EmptyState(modifier: Modifier = Modifier) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
+            // アクティブな回線が無くてもアーカイブ済みがあれば一覧への導線を残す
+            if (archivedCount > 0) {
+                Spacer(Modifier.height(16.dp))
+                ShowArchivedButton(count = archivedCount, onClick = onShowArchived)
+            }
         }
     }
 }

@@ -22,14 +22,17 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.platform.LocalDensity
@@ -43,15 +46,23 @@ import kotlin.math.roundToInt
 val ArchiveGreen = Color(0xFF2E7D32)
 
 /**
- * 左スワイプで右端に緑のアーカイブアクションを露出させ、タップで確定するコンテナ。
+ * 左スワイプで右端に緑のアクションを露出させ、タップで確定するコンテナ。
  * 反対方向(右)へ戻すと閉じる。確定はアクションのタップのみ(スワイプしきり=自動確定はしない)。
  *
+ * アクションのアイコン・ラベルは引数で差し替えられる(アーカイブ/解除など)。
  * スワイプ感度はすべて [SwipeTuning] の定数で調整する。
+ *
+ * @param scrollInProgress 親リストがスクロール中かを返すラムダ。スクロール開始で開いている
+ *   アクションを自動で閉じる。値の読み取りを遅延させ、スクロール中に本コンポーザブルを
+ *   再コンポーズさせないためラムダで受ける。
  */
 @Composable
-fun SwipeToArchiveBox(
-    onArchive: () -> Unit,
+fun SwipeToActionBox(
+    onAction: () -> Unit,
+    actionIcon: ImageVector,
+    actionLabel: String,
     modifier: Modifier = Modifier,
+    scrollInProgress: () -> Boolean = { false },
     content: @Composable () -> Unit,
 ) {
     val density = LocalDensity.current
@@ -72,27 +83,36 @@ fun SwipeToArchiveBox(
         scope.launch { offsetX.animateTo(if (open) -actionWidthPx else 0f, tween(SwipeTuning.SettleDurationMs)) }
     }
 
+    // 開いた状態でページをスクロールしたら閉じる。snapshotFlow でスクロール状態の変化だけを
+    // 監視するため、スクロール中に本コンポーザブルは再コンポーズされない。
+    LaunchedEffect(Unit) {
+        snapshotFlow(scrollInProgress).collect { scrolling ->
+            if (scrolling) settle(open = false)
+        }
+    }
+
     Box(modifier = modifier.fillMaxWidth().clip(shape)) {
-        // 背景: 右端に固定された緑のアーカイブアクション
-        Box(modifier = Modifier.matchParentSize()) {
+        // 背景: 全面を緑で塗る。外側の clip(shape) が角を丸めるので、
+        // カードの丸角の隙間(露出部)まで緑がきっちり入る。
+        // アイコン/ラベルと確定タップは右端 88dp の Column に配置する。
+        Box(modifier = Modifier.matchParentSize().background(ArchiveGreen)) {
             Column(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
                     .fillMaxHeight()
                     .width(SwipeTuning.ActionWidth)
-                    .background(ArchiveGreen)
                     // 半分以上開いているときだけタップで確定(誤タップ防止)
                     .clickable(enabled = canConfirm) {
-                        onArchive()
+                        onAction()
                         settle(open = false)
                     },
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Icon(Icons.Filled.Archive, contentDescription = "アーカイブ", tint = Color.White)
+                Icon(actionIcon, contentDescription = actionLabel, tint = Color.White)
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    "アーカイブ",
+                    actionLabel,
                     style = MaterialTheme.typography.labelSmall,
                     color = Color.White,
                 )
@@ -140,6 +160,26 @@ fun SwipeToArchiveBox(
             }
         }
     }
+}
+
+/**
+ * 左スワイプで緑の「アーカイブ」アクションを露出させる [SwipeToActionBox] のショートカット。
+ */
+@Composable
+fun SwipeToArchiveBox(
+    onArchive: () -> Unit,
+    modifier: Modifier = Modifier,
+    scrollInProgress: () -> Boolean = { false },
+    content: @Composable () -> Unit,
+) {
+    SwipeToActionBox(
+        onAction = onArchive,
+        actionIcon = Icons.Filled.Archive,
+        actionLabel = "アーカイブ",
+        modifier = modifier,
+        scrollInProgress = scrollInProgress,
+        content = content,
+    )
 }
 
 /** スワイプ操作感のチューニング値(1箇所に集約。実機で微調整する前提)。 */

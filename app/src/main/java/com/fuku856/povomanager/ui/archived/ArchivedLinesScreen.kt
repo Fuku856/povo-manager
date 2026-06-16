@@ -11,9 +11,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Unarchive
@@ -27,7 +27,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -37,8 +36,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.fuku856.povomanager.domain.LineStatus
-import com.fuku856.povomanager.ui.common.ArchiveGreen
 import com.fuku856.povomanager.ui.common.RemainingDaysBadge
+import com.fuku856.povomanager.ui.common.SwipeToActionBox
 import com.fuku856.povomanager.ui.common.displayName
 import com.fuku856.povomanager.ui.common.formatPhoneNumber
 import com.fuku856.povomanager.ui.common.toDisplayString
@@ -67,17 +66,25 @@ fun ArchivedLinesScreen(
         if (uiState.loaded && uiState.statuses.isEmpty()) {
             EmptyState(modifier = Modifier.fillMaxSize().padding(innerPadding))
         } else {
+            val listState = rememberLazyListState()
             LazyColumn(
+                state = listState,
                 modifier = Modifier.fillMaxSize().padding(innerPadding),
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 items(uiState.statuses, key = { it.line.id }) { status ->
-                    ArchivedLineCard(
-                        status = status,
-                        onClick = { onLineClick(status.line.id) },
-                        onUnarchive = { viewModel.unarchive(status.line.id) },
-                    )
+                    SwipeToActionBox(
+                        onAction = { viewModel.unarchive(status.line.id) },
+                        actionIcon = Icons.Default.Unarchive,
+                        actionLabel = "解除",
+                        scrollInProgress = { listState.isScrollInProgress },
+                    ) {
+                        ArchivedLineCard(
+                            status = status,
+                            onClick = { onLineClick(status.line.id) },
+                        )
+                    }
                 }
             }
         }
@@ -88,7 +95,6 @@ fun ArchivedLinesScreen(
 private fun ArchivedLineCard(
     status: LineStatus,
     onClick: () -> Unit,
-    onUnarchive: () -> Unit,
 ) {
     Card(
         onClick = onClick,
@@ -120,16 +126,6 @@ private fun ArchivedLineCard(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            }
-
-            Spacer(Modifier.height(8.dp))
-            TextButton(
-                onClick = onUnarchive,
-                modifier = Modifier.align(Alignment.End),
-            ) {
-                Icon(Icons.Default.Unarchive, contentDescription = null, tint = ArchiveGreen, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text("アーカイブ解除")
             }
         }
     }
