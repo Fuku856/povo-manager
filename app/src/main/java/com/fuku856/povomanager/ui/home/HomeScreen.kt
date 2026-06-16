@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddShoppingCart
@@ -120,13 +121,18 @@ fun HomeScreen(
         if (uiState.loaded && uiState.statuses.isEmpty()) {
             EmptyState(modifier = Modifier.fillMaxSize().padding(innerPadding))
         } else {
+            val listState = rememberLazyListState()
             LazyColumn(
+                state = listState,
                 modifier = Modifier.fillMaxSize().padding(innerPadding),
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 items(uiState.statuses, key = { it.line.id }) { status ->
-                    SwipeToArchiveBox(onArchive = { viewModel.archiveLine(status.line.id) }) {
+                    SwipeToArchiveBox(
+                        onArchive = { viewModel.archiveLine(status.line.id) },
+                        scrollInProgress = listState.isScrollInProgress,
+                    ) {
                         LineCard(
                             status = status,
                             expiryPeriodDays = uiState.expiryPeriodDays,
