@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import kotlin.math.exp
 import kotlin.math.roundToInt
 
 /** アーカイブ系UIで共通利用する緑。スワイプアクション背景・ボタンアイコンに使う。 */
@@ -200,12 +201,21 @@ fun SwipeToArchiveBox(
 }
 
 /**
- * 範囲 [min, max] を超えたドラッグ量に抵抗をかけ、ゴムのような追従感を出す。
- * 範囲内はそのまま、範囲外は超過分を [SwipeTuning.OverscrollResistance] 倍に圧縮する。
+ * ドラッグ量にゴムのような追従感を出す。範囲内 [min, max] はそのまま返す。
+ *
+ * - 閉じ側(max を超える=右)はクランプする。背景の緑は右端にしか無いため、ここを伸ばすと
+ *   カードが右へずれて左端に緑が露出してしまうため。
+ * - 開き側(min を下回る=左)だけラバーバンド。超過分を圧縮しつつ、上限
+ *   [SwipeTuning.MaxOverscrollFraction](範囲幅に対する割合)へ漸近させて頭打ちにする。
+ *   壁にぶつかる感触を出さないため線形クランプではなく指数で滑らかに飽和させる。
  */
 private fun rubberBand(raw: Float, min: Float, max: Float): Float = when {
-    raw > max -> max + (raw - max) * SwipeTuning.OverscrollResistance
-    raw < min -> min + (raw - min) * SwipeTuning.OverscrollResistance
+    raw > max -> max
+    raw < min -> {
+        val overflow = min - raw
+        val limit = (max - min) * SwipeTuning.MaxOverscrollFraction
+        min - limit * (1f - exp(-SwipeTuning.OverscrollResistance * overflow / limit))
+    }
     else -> raw
 }
 
@@ -220,6 +230,8 @@ private object SwipeTuning {
     /** 開閉アニメーション(なめらか・跳ねない spring)。下げるほど緩やかに動く。 */
     const val SettleStiffness = Spring.StiffnessMedium
     const val SettleDampingRatio = Spring.DampingRatioNoBouncy
-    /** 端を超えてドラッグしたときの追従率(0=固定, 1=等倍)。上げるほどよく伸びる。 */
+    /** 端を超えてドラッグしたとき、超過分の最初の追従率(0=固定, 1=等倍)。上げるほどよく伸びる。 */
     const val OverscrollResistance = 0.35f
+    /** ラバーバンドで伸びる上限。露出幅(ActionWidth)に対する割合で、ここへ漸近して頭打ち。 */
+    const val MaxOverscrollFraction = 0.25f
 }
