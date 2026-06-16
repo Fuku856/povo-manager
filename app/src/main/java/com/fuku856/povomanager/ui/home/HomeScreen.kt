@@ -119,7 +119,11 @@ fun HomeScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { innerPadding ->
         if (uiState.loaded && uiState.statuses.isEmpty()) {
-            EmptyState(modifier = Modifier.fillMaxSize().padding(innerPadding))
+            EmptyState(
+                modifier = Modifier.fillMaxSize().padding(innerPadding),
+                archivedCount = uiState.archivedCount,
+                onShowArchived = onShowArchived,
+            )
         } else {
             val listState = rememberLazyListState()
             LazyColumn(
@@ -259,7 +263,11 @@ private fun LabeledDate(label: String, date: LocalDate?) {
 }
 
 @Composable
-private fun EmptyState(modifier: Modifier = Modifier) {
+private fun EmptyState(
+    modifier: Modifier = Modifier,
+    archivedCount: Int = 0,
+    onShowArchived: () -> Unit = {},
+) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(
@@ -277,6 +285,11 @@ private fun EmptyState(modifier: Modifier = Modifier) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
+            // アクティブな回線が無くてもアーカイブ済みがあれば一覧への導線を残す
+            if (archivedCount > 0) {
+                Spacer(Modifier.height(16.dp))
+                ShowArchivedButton(count = archivedCount, onClick = onShowArchived)
+            }
         }
     }
 }
