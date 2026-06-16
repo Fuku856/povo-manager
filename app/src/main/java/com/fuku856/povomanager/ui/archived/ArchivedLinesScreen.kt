@@ -78,7 +78,7 @@ fun ArchivedLinesScreen(
                         onAction = { viewModel.unarchive(status.line.id) },
                         actionIcon = Icons.Default.Unarchive,
                         actionLabel = "解除",
-                        scrollInProgress = listState.isScrollInProgress,
+                        scrollInProgress = { listState.isScrollInProgress },
                     ) {
                         ArchivedLineCard(
                             status = status,

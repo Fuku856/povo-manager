@@ -27,6 +27,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,10 +49,12 @@ val ArchiveGreen = Color(0xFF2E7D32)
  * 左スワイプで右端に緑のアクションを露出させ、タップで確定するコンテナ。
  * 反対方向(右)へ戻すと閉じる。確定はアクションのタップのみ(スワイプしきり=自動確定はしない)。
  *
- * アクションのアイコン・ラベル・色は引数で差し替えられる(アーカイブ/解除など)。
+ * アクションのアイコン・ラベルは引数で差し替えられる(アーカイブ/解除など)。
  * スワイプ感度はすべて [SwipeTuning] の定数で調整する。
  *
- * @param scrollInProgress 親リストがスクロール中なら開いているアクションを自動で閉じる。
+ * @param scrollInProgress 親リストがスクロール中かを返すラムダ。スクロール開始で開いている
+ *   アクションを自動で閉じる。値の読み取りを遅延させ、スクロール中に本コンポーザブルを
+ *   再コンポーズさせないためラムダで受ける。
  */
 @Composable
 fun SwipeToActionBox(
@@ -59,8 +62,7 @@ fun SwipeToActionBox(
     actionIcon: ImageVector,
     actionLabel: String,
     modifier: Modifier = Modifier,
-    actionColor: Color = ArchiveGreen,
-    scrollInProgress: Boolean = false,
+    scrollInProgress: () -> Boolean = { false },
     content: @Composable () -> Unit,
 ) {
     val density = LocalDensity.current
@@ -81,17 +83,19 @@ fun SwipeToActionBox(
         scope.launch { offsetX.animateTo(if (open) -actionWidthPx else 0f, tween(SwipeTuning.SettleDurationMs)) }
     }
 
-    // 開いた状態でページをスクロールしたら閉じる。isScrollInProgress はスクロールの
-    // 開始/終了でのみ切り替わるため、毎フレーム再コンポーズにはならない。
-    LaunchedEffect(scrollInProgress) {
-        if (scrollInProgress) settle(open = false)
+    // 開いた状態でページをスクロールしたら閉じる。snapshotFlow でスクロール状態の変化だけを
+    // 監視するため、スクロール中に本コンポーザブルは再コンポーズされない。
+    LaunchedEffect(Unit) {
+        snapshotFlow(scrollInProgress).collect { scrolling ->
+            if (scrolling) settle(open = false)
+        }
     }
 
     Box(modifier = modifier.fillMaxWidth().clip(shape)) {
         // 背景: 全面を緑で塗る。外側の clip(shape) が角を丸めるので、
         // カードの丸角の隙間(露出部)まで緑がきっちり入る。
         // アイコン/ラベルと確定タップは右端 88dp の Column に配置する。
-        Box(modifier = Modifier.matchParentSize().background(actionColor)) {
+        Box(modifier = Modifier.matchParentSize().background(ArchiveGreen)) {
             Column(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
@@ -165,7 +169,7 @@ fun SwipeToActionBox(
 fun SwipeToArchiveBox(
     onArchive: () -> Unit,
     modifier: Modifier = Modifier,
-    scrollInProgress: Boolean = false,
+    scrollInProgress: () -> Boolean = { false },
     content: @Composable () -> Unit,
 ) {
     SwipeToActionBox(

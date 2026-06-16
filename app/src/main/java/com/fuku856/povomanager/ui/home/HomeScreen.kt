@@ -31,7 +31,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
@@ -54,6 +53,7 @@ import com.fuku856.povomanager.ui.common.ArchiveGreen
 import com.fuku856.povomanager.ui.common.ExpiryProgressBar
 import com.fuku856.povomanager.ui.common.PurchaseSheet
 import com.fuku856.povomanager.ui.common.RemainingDaysBadge
+import com.fuku856.povomanager.ui.common.SwipeDismissSnackbarHost
 import com.fuku856.povomanager.ui.common.SwipeToArchiveBox
 import com.fuku856.povomanager.ui.common.displayName
 import com.fuku856.povomanager.ui.common.formatPhoneNumber
@@ -116,7 +116,7 @@ fun HomeScreen(
                 text = { Text("回線を追加") },
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { SwipeDismissSnackbarHost(snackbarHostState) },
     ) { innerPadding ->
         if (uiState.loaded && uiState.statuses.isEmpty()) {
             EmptyState(
@@ -135,7 +135,7 @@ fun HomeScreen(
                 items(uiState.statuses, key = { it.line.id }) { status ->
                     SwipeToArchiveBox(
                         onArchive = { viewModel.archiveLine(status.line.id) },
-                        scrollInProgress = listState.isScrollInProgress,
+                        scrollInProgress = { listState.isScrollInProgress },
                     ) {
                         LineCard(
                             status = status,
