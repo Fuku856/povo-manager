@@ -1,7 +1,8 @@
 package com.fuku856.povomanager.ui.common
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -40,6 +41,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import kotlin.math.exp
 import kotlin.math.roundToInt
 
 /** アーカイブ系UIで共通利用する緑。スワイプアクション背景・ボタンアイコンに使う。 */
@@ -79,8 +81,17 @@ fun SwipeToActionBox(
     }
     val isOpen by remember { derivedStateOf { offsetX.value < -1f } }
 
-    fun settle(open: Boolean) {
-        scope.launch { offsetX.animateTo(if (open) -actionWidthPx else 0f, tween(SwipeTuning.SettleDurationMs)) }
+    fun settle(open: Boolean, initialVelocity: Float = 0f) {
+        scope.launch {
+            offsetX.animateTo(
+                targetValue = if (open) -actionWidthPx else 0f,
+                animationSpec = spring(
+                    dampingRatio = SwipeTuning.SettleDampingRatio,
+                    stiffness = SwipeTuning.SettleStiffness,
+                ),
+                initialVelocity = initialVelocity,
+            )
+        }
     }
 
     // 開いた状態でページをスクロールしたら閉じる。snapshotFlow でスクロール状態の変化だけを
@@ -125,12 +136,18 @@ fun SwipeToActionBox(
                 .offset { IntOffset(offsetX.value.roundToInt(), 0) }
                 .pointerInput(actionWidthPx, flingThresholdPx) {
                     val velocityTracker = VelocityTracker()
+                    // 端を超えた分にラバーバンド抵抗をかけるため、生のドラッグ累積を別途追う。
+                    var rawOffset = 0f
                     detectHorizontalDragGestures(
-                        onDragStart = { velocityTracker.resetTracking() },
+                        onDragStart = {
+                            velocityTracker.resetTracking()
+                            rawOffset = offsetX.value
+                        },
                         onHorizontalDrag = { change, dragAmount ->
                             change.consume()
                             velocityTracker.addPosition(change.uptimeMillis, change.position)
-                            val target = (offsetX.value + dragAmount).coerceIn(-actionWidthPx, 0f)
+                            rawOffset += dragAmount
+                            val target = rubberBand(rawOffset, -actionWidthPx, 0f)
                             scope.launch { offsetX.snapTo(target) }
                         },
                         onDragEnd = {
@@ -140,7 +157,8 @@ fun SwipeToActionBox(
                             } else {
                                 offsetX.value <= -actionWidthPx * SwipeTuning.OpenThresholdFraction
                             }
-                            settle(open)
+                            // 離した瞬間の速度を引き継ぎ、指の勢いのまま開閉する。
+                            settle(open, velocity)
                         },
                         onDragCancel = { settle(open = false) },
                     )
@@ -182,6 +200,25 @@ fun SwipeToArchiveBox(
     )
 }
 
+/**
+ * ドラッグ量にゴムのような追従感を出す。範囲内 [min, max] はそのまま返す。
+ *
+ * - 閉じ側(max を超える=右)はクランプする。背景の緑は右端にしか無いため、ここを伸ばすと
+ *   カードが右へずれて左端に緑が露出してしまうため。
+ * - 開き側(min を下回る=左)だけラバーバンド。超過分を圧縮しつつ、上限
+ *   [SwipeTuning.MaxOverscrollFraction](範囲幅に対する割合)へ漸近させて頭打ちにする。
+ *   壁にぶつかる感触を出さないため線形クランプではなく指数で滑らかに飽和させる。
+ */
+private fun rubberBand(raw: Float, min: Float, max: Float): Float = when {
+    raw > max -> max
+    raw < min -> {
+        val overflow = min - raw
+        val limit = (max - min) * SwipeTuning.MaxOverscrollFraction
+        min - limit * (1f - exp(-SwipeTuning.OverscrollResistance * overflow / limit))
+    }
+    else -> raw
+}
+
 /** スワイプ操作感のチューニング値(1箇所に集約。実機で微調整する前提)。 */
 private object SwipeTuning {
     /** 露出するアクションの幅 */
@@ -190,6 +227,11 @@ private object SwipeTuning {
     const val OpenThresholdFraction = 0.4f
     /** これを超える速度の左フリックは即「開く」(dp/s 相当で指定) */
     val FlingVelocityThreshold = 400.dp
-    /** 開閉アニメーションの時間。画面遷移(280ms)より気持ち速く */
-    const val SettleDurationMs = 220
+    /** 開閉アニメーション(なめらか・跳ねない spring)。下げるほど緩やかに動く。 */
+    const val SettleStiffness = Spring.StiffnessMedium
+    const val SettleDampingRatio = Spring.DampingRatioNoBouncy
+    /** 端を超えてドラッグしたとき、超過分の最初の追従率(0=固定, 1=等倍)。上げるほどよく伸びる。 */
+    const val OverscrollResistance = 0.35f
+    /** ラバーバンドで伸びる上限。露出幅(ActionWidth)に対する割合で、ここへ漸近して頭打ち。 */
+    const val MaxOverscrollFraction = 0.25f
 }
