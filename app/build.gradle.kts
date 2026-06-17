@@ -57,6 +57,20 @@ android {
     buildFeatures {
         compose = true
     }
+
+    // Robolectric から Android リソース/アセットを読めるようにする。
+    // Room の MigrationTestHelper はエクスポート済みスキーマ(schemas/)をアセット経由で読むため必須。
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
+    }
+    sourceSets {
+        // exportSchema の出力先 schemas/ を debug バリアントのアセットに含める。
+        // Robolectric はテスト対象バリアント(testDebugUnitTest=debug)のマージ済みアセットを読むため、
+        // ここに置くと MigrationTestHelper から参照できる(release APK には含まれない)。
+        getByName("debug").assets.srcDir("$projectDir/schemas")
+    }
 }
 
 // Room のスキーマ履歴の出力先(exportSchema = true と対で必要)
@@ -100,4 +114,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
 
     testImplementation(libs.junit)
+    testImplementation(libs.androidx.room.testing)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.ext.junit)
 }

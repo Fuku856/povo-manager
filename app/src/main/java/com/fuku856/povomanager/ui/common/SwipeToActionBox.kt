@@ -41,6 +41,7 @@ import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.exp
@@ -87,7 +88,7 @@ fun SwipeToActionBox(
     // offsetX.value をコンポジションで直接読むと毎フレーム再コンポーズされるため、
     // 状態が反転したときだけ通知される derived state を経由する。
     val canConfirm by remember(actionWidthPx) {
-        derivedStateOf { offsetX.value <= -actionWidthPx * 0.5f }
+        derivedStateOf { offsetX.value <= -actionWidthPx * SwipeTuning.ConfirmThresholdFraction }
     }
     val isOpen by remember { derivedStateOf { offsetX.value < -1f } }
 
@@ -148,30 +149,35 @@ fun SwipeToActionBox(
                     val velocityTracker = VelocityTracker()
                     // 端を超えた分にラバーバンド抵抗をかけるため、生のドラッグ累積を別途追う。
                     var rawOffset = 0f
-                    detectHorizontalDragGestures(
-                        onDragStart = {
-                            velocityTracker.resetTracking()
-                            rawOffset = offsetX.value
-                        },
-                        onHorizontalDrag = { change, dragAmount ->
-                            change.consume()
-                            velocityTracker.addPosition(change.uptimeMillis, change.position)
-                            rawOffset += dragAmount
-                            val target = rubberBand(rawOffset, -actionWidthPx, 0f)
-                            scope.launch { offsetX.snapTo(target) }
-                        },
-                        onDragEnd = {
-                            val velocity = velocityTracker.calculateVelocity().x
-                            val open = if (abs(velocity) > flingThresholdPx) {
-                                velocity < 0 // 左向きフリックで開く
-                            } else {
-                                offsetX.value <= -actionWidthPx * SwipeTuning.OpenThresholdFraction
-                            }
-                            // 離した瞬間の速度を引き継ぎ、指の勢いのまま開閉する。
-                            settle(open, velocity)
-                        },
-                        onDragCancel = { settle(open = false) },
-                    )
+                    // snapTo はジェスチャと同じディスパッチャ上で動かす。composition の
+                    // rememberCoroutineScope に毎フレーム launch するとフレーム同期がずれて
+                    // 追従が一拍遅れるため、pointerInput 自身の coroutineScope から起動する。
+                    coroutineScope {
+                        detectHorizontalDragGestures(
+                            onDragStart = {
+                                velocityTracker.resetTracking()
+                                rawOffset = offsetX.value
+                            },
+                            onHorizontalDrag = { change, dragAmount ->
+                                change.consume()
+                                velocityTracker.addPosition(change.uptimeMillis, change.position)
+                                rawOffset += dragAmount
+                                val target = rubberBand(rawOffset, -actionWidthPx, 0f)
+                                launch { offsetX.snapTo(target) }
+                            },
+                            onDragEnd = {
+                                val velocity = velocityTracker.calculateVelocity().x
+                                val open = if (abs(velocity) > flingThresholdPx) {
+                                    velocity < 0 // 左向きフリックで開く
+                                } else {
+                                    offsetX.value <= -actionWidthPx * SwipeTuning.OpenThresholdFraction
+                                }
+                                // 離した瞬間の速度を引き継ぎ、指の勢いのまま開閉する。
+                                settle(open, velocity)
+                            },
+                            onDragCancel = { settle(open = false) },
+                        )
+                    }
                 },
         ) {
             content()
@@ -249,6 +255,11 @@ private object SwipeTuning {
     val ActionWidth = 88.dp
     /** 指を離したとき開く判定: アクション幅に対するドラッグ割合 */
     const val OpenThresholdFraction = 0.4f
+    /**
+     * アクションのタップ確定を有効にする最小開き量: アクション幅に対する割合。
+     * [OpenThresholdFraction] より大きくして、開ききる前の半端な状態での誤確定を防ぐ。
+     */
+    const val ConfirmThresholdFraction = 0.5f
     /** これを超える速度の左フリックは即「開く」(dp/s 相当で指定) */
     val FlingVelocityThreshold = 400.dp
     /** 開閉アニメーション(なめらか・跳ねない spring)。下げるほど緩やかに動く。 */
