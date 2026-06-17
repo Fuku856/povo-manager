@@ -73,16 +73,19 @@ fun SwipeToActionBox(
     val density = LocalDensity.current
     val actionWidthPx = with(density) { SwipeTuning.ActionWidth.toPx() }
     val flingThresholdPx = with(density) { SwipeTuning.FlingVelocityThreshold.toPx() }
-    val maxOverscrollPx = actionWidthPx * SwipeTuning.MaxOverscrollFraction
     val scope = rememberCoroutineScope()
     val offsetX = remember { Animatable(0f) }
     val shape = RoundedCornerShape(12.dp)
 
-    // 閉じ側(右)は 0 を上限に固定する。フリックで閉じると settle の spring が指の勢いを
+    // 閉じ側(右)だけ 0 を上限に固定する。フリックで閉じると settle の spring が指の勢いを
     // 引き継いで 0 を一瞬オーバーシュートし、カードが右へずれて左端に背景の緑が覗くのを防ぐ。
-    // 下限は開き側ラバーバンドの到達点(= rubberBand の飽和点)に合わせる。
-    LaunchedEffect(actionWidthPx, maxOverscrollPx) {
-        offsetX.updateBounds(lowerBound = -(actionWidthPx + maxOverscrollPx), upperBound = 0f)
+    // 閉じ位置=境界なのでそこで止まって正しい。
+    //
+    // 開き側に下限は設けない。開き位置(-ActionWidth)は境界ではないため、下限を入れると
+    // 勢いよく開いたとき spring が下限に達した時点で animateTo が停止し、-ActionWidth まで
+    // 戻らず行き過ぎた位置で止まってしまう。ドラッグ中の伸びは rubberBand が制限済み。
+    LaunchedEffect(Unit) {
+        offsetX.updateBounds(upperBound = 0f)
     }
 
     // offsetX.value をコンポジションで直接読むと毎フレーム再コンポーズされるため、
