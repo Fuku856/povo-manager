@@ -110,14 +110,12 @@ fun LineDetailScreen(
                 },
                 actions = {
                     status?.let { current ->
-                        if (current.line.isArchived) {
-                            IconButton(onClick = { viewModel.toggleArchive(); onBack() }) {
-                                Icon(Icons.Default.Unarchive, contentDescription = "アーカイブ解除")
-                            }
-                        } else {
-                            IconButton(onClick = { viewModel.toggleArchive(); onBack() }) {
-                                Icon(Icons.Default.Archive, contentDescription = "アーカイブ")
-                            }
+                        val archived = current.line.isArchived
+                        IconButton(onClick = { viewModel.toggleArchive(onBack) }) {
+                            Icon(
+                                if (archived) Icons.Default.Unarchive else Icons.Default.Archive,
+                                contentDescription = if (archived) "アーカイブ解除" else "アーカイブ",
+                            )
                         }
                     }
                     IconButton(onClick = onEdit) {
