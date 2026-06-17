@@ -55,6 +55,10 @@ class LineDetailViewModel @Inject constructor(
     private val _events = Channel<PurchaseEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
 
+    /** アーカイブ状態が変わったことの通知。true=アーカイブ, false=解除。undo スナックバー表示用。 */
+    private val _archiveEvent = Channel<Boolean>(Channel.BUFFERED)
+    val archiveEvent = _archiveEvent.receiveAsFlow()
+
     fun recordPurchase(date: LocalDate, toppingName: String, validityEndDate: LocalDate?) {
         viewModelScope.launch {
             val purchase = ToppingPurchase(
@@ -76,12 +80,21 @@ class LineDetailViewModel @Inject constructor(
         }
     }
 
-    /** アーカイブ状態をトグルする。書き込み完了後に [onDone] を呼ぶ(画面遷移を完了後に行うため)。 */
-    fun toggleArchive(onDone: () -> Unit) {
+    /** アーカイブ状態をトグルし、結果を [archiveEvent] で通知する(undo スナックバー用)。 */
+    fun toggleArchive() {
         viewModelScope.launch {
             val line = repository.getLine(lineId) ?: return@launch
-            repository.setArchived(line, !line.isArchived)
-            onDone()
+            val nowArchived = !line.isArchived
+            repository.setArchived(line, nowArchived)
+            _archiveEvent.send(nowArchived)
+        }
+    }
+
+    /** undo 用。イベントを発行せずにアーカイブ状態を設定する(スナックバーの連鎖を防ぐ)。 */
+    fun setArchivedSilently(archived: Boolean) {
+        viewModelScope.launch {
+            val line = repository.getLine(lineId) ?: return@launch
+            repository.setArchived(line, archived)
         }
     }
 
