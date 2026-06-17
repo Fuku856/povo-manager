@@ -5,8 +5,10 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -70,9 +72,17 @@ fun SwipeToActionBox(
     val density = LocalDensity.current
     val actionWidthPx = with(density) { SwipeTuning.ActionWidth.toPx() }
     val flingThresholdPx = with(density) { SwipeTuning.FlingVelocityThreshold.toPx() }
+    val maxOverscrollPx = actionWidthPx * SwipeTuning.MaxOverscrollFraction
     val scope = rememberCoroutineScope()
     val offsetX = remember { Animatable(0f) }
     val shape = RoundedCornerShape(12.dp)
+
+    // 閉じ側(右)は 0 を上限に固定する。フリックで閉じると settle の spring が指の勢いを
+    // 引き継いで 0 を一瞬オーバーシュートし、カードが右へずれて左端に背景の緑が覗くのを防ぐ。
+    // 下限は開き側ラバーバンドの到達点(= rubberBand の飽和点)に合わせる。
+    LaunchedEffect(actionWidthPx, maxOverscrollPx) {
+        offsetX.updateBounds(lowerBound = -(actionWidthPx + maxOverscrollPx), upperBound = 0f)
+    }
 
     // offsetX.value をコンポジションで直接読むと毎フレーム再コンポーズされるため、
     // 状態が反転したときだけ通知される derived state を経由する。
@@ -167,12 +177,26 @@ fun SwipeToActionBox(
             content()
             // 開いている間だけ本体上にオーバーレイを置き、タップを「閉じる」に割り当てる。
             // 閉じているときは存在しないため、カード本来のタップ(詳細遷移)はそのまま機能する。
+            //
+            // ここで down を消費しないのが要点。横ドラッグ(=スワイプで閉じる)は親の drag
+            // ジェスチャに任せたいので、タップか否かが確定するまでイベントを奪わない。
+            // detectTapGestures は down を消費してしまい、上を通る閉じドラッグと競合して
+            // 戻すスライドが引っかかるため使わない。
             if (isOpen) {
                 Box(
                     modifier = Modifier
                         .matchParentSize()
                         .pointerInput(Unit) {
-                            detectTapGestures { settle(open = false) }
+                            awaitEachGesture {
+                                awaitFirstDown(requireUnconsumed = false)
+                                // 指を離すまで待つ。途中で親のドラッグが横移動を消費すると
+                                // null が返る(タップではなくスワイプだった)ので何もしない。
+                                val up = waitForUpOrCancellation()
+                                if (up != null) {
+                                    up.consume() // カード本来のタップ(詳細遷移)を抑止して閉じる
+                                    settle(open = false)
+                                }
+                            }
                         },
                 )
             }
