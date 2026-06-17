@@ -19,9 +19,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddShoppingCart
+import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EditCalendar
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Unarchive
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -107,6 +109,15 @@ fun LineDetailScreen(
                     }
                 },
                 actions = {
+                    status?.let { current ->
+                        val archived = current.line.isArchived
+                        IconButton(onClick = { viewModel.toggleArchive(onBack) }) {
+                            Icon(
+                                if (archived) Icons.Default.Unarchive else Icons.Default.Archive,
+                                contentDescription = if (archived) "アーカイブ解除" else "アーカイブ",
+                            )
+                        }
+                    }
                     IconButton(onClick = onEdit) {
                         Icon(Icons.Default.Edit, contentDescription = "編集")
                     }

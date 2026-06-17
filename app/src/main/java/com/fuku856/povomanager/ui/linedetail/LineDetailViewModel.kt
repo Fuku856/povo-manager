@@ -76,6 +76,15 @@ class LineDetailViewModel @Inject constructor(
         }
     }
 
+    /** アーカイブ状態をトグルする。書き込み完了後に [onDone] を呼ぶ(画面遷移を完了後に行うため)。 */
+    fun toggleArchive(onDone: () -> Unit) {
+        viewModelScope.launch {
+            val line = repository.getLine(lineId) ?: return@launch
+            repository.setArchived(line, !line.isArchived)
+            onDone()
+        }
+    }
+
     fun deletePurchase(purchase: ToppingPurchase) {
         viewModelScope.launch {
             repository.deletePurchase(purchase)

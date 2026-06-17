@@ -39,6 +39,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.coroutineScope
@@ -116,7 +119,19 @@ fun SwipeToActionBox(
         }
     }
 
-    Box(modifier = modifier.fillMaxWidth().clip(shape)) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(shape)
+            // スワイプの非ジェスチャ代替。TalkBack 等にカスタムアクションとして露出する。
+            // mergeDescendants=true で内側のカードと1つのフォーカス要素にまとめ、
+            // カードにフォーカスした状態でカスタムアクションが読み上げ・実行できるようにする。
+            .semantics(mergeDescendants = true) {
+                customActions = listOf(
+                    CustomAccessibilityAction(actionLabel) { onAction(); true },
+                )
+            },
+    ) {
         // 背景: 全面を緑で塗る。外側の clip(shape) が角を丸めるので、
         // カードの丸角の隙間(露出部)まで緑がきっちり入る。
         // アイコン/ラベルと確定タップは右端 88dp の Column に配置する。
