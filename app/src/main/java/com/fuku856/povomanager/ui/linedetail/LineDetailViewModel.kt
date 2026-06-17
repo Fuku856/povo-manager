@@ -76,6 +76,13 @@ class LineDetailViewModel @Inject constructor(
         }
     }
 
+    fun toggleArchive() {
+        viewModelScope.launch {
+            val line = repository.getLine(lineId) ?: return@launch
+            repository.setArchived(line, !line.isArchived)
+        }
+    }
+
     fun deletePurchase(purchase: ToppingPurchase) {
         viewModelScope.launch {
             repository.deletePurchase(purchase)
