@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -37,6 +38,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.fuku856.povomanager.domain.LineStatus
 import com.fuku856.povomanager.ui.common.RemainingDaysBadge
+import com.fuku856.povomanager.ui.common.SimTypeChip
 import com.fuku856.povomanager.ui.common.SwipeToActionBox
 import com.fuku856.povomanager.ui.common.displayName
 import com.fuku856.povomanager.ui.common.formatPhoneNumber
@@ -107,7 +109,13 @@ private fun ArchivedLineCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(status.line.displayName, style = MaterialTheme.typography.titleMedium)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(status.line.displayName, style = MaterialTheme.typography.titleMedium)
+                        status.line.simType?.let {
+                            Spacer(Modifier.width(8.dp))
+                            SimTypeChip(it)
+                        }
+                    }
                     if (!status.line.name.isNullOrBlank()) {
                         Text(
                             formatPhoneNumber(status.line.phoneNumber),

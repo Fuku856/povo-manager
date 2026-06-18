@@ -6,6 +6,7 @@ import com.fuku856.povomanager.data.LineRepository
 import com.fuku856.povomanager.data.db.LineWithPurchases
 import com.fuku856.povomanager.data.db.PovoLine
 import com.fuku856.povomanager.data.db.ToppingPurchase
+import com.fuku856.povomanager.domain.SimType
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -40,6 +41,8 @@ data class BackupLine(
     val name: String? = null,
     val memo: String? = null,
     val notifyDaysOverride: List<Int>? = null,
+    /** SIM種別の enum 名(PHYSICAL/ESIM)。未設定や旧形式は null */
+    val simType: String? = null,
     val sortOrder: Int = 0,
     val isArchived: Boolean = false,
     val purchases: List<BackupPurchase> = emptyList(),
@@ -122,6 +125,7 @@ class BackupManager @Inject constructor(
         name = line.name,
         memo = line.memo,
         notifyDaysOverride = line.notifyDaysOverride?.toList(),
+        simType = line.simType?.name,
         sortOrder = line.sortOrder,
         isArchived = line.isArchived,
         purchases = purchases.map {
@@ -139,6 +143,8 @@ class BackupManager @Inject constructor(
             name = name,
             memo = memo,
             notifyDaysOverride = notifyDaysOverride?.toSet(),
+            // 不明な値で落ちないよう防御する(将来の種別追加・破損データ対策)
+            simType = simType?.let { runCatching { SimType.valueOf(it) }.getOrNull() },
             sortOrder = sortOrder,
             isArchived = isArchived,
         ),

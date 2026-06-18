@@ -6,6 +6,7 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import androidx.room.Relation
+import com.fuku856.povomanager.domain.SimType
 import java.time.LocalDate
 
 @Entity(tableName = "lines")
@@ -18,6 +19,8 @@ data class PovoLine(
     /** 通知タイミングの回線ごと上書き。null=共通設定を使用 */
     val notifyDaysOverride: Set<Int>? = null,
     val memo: String? = null,
+    /** SIM種別(物理SIM/eSIM)。この機能より前に登録された回線はnull */
+    val simType: SimType? = null,
     val sortOrder: Int = 0,
     /** アーカイブ済みか。trueの間はホーム一覧・ウィジェット・通知から除外される */
     val isArchived: Boolean = false,

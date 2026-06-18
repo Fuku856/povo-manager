@@ -49,6 +49,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.fuku856.povomanager.domain.SimType
 import com.fuku856.povomanager.ui.common.PhoneNumberVisualTransformation
 import com.fuku856.povomanager.ui.common.toDisplayString
 import java.time.Instant
@@ -122,6 +123,28 @@ fun LineEditScreen(
                 minLines = 2,
                 modifier = Modifier.fillMaxWidth(),
             )
+
+            Column {
+                Text("SIM種別(必須)", style = MaterialTheme.typography.bodyLarge)
+                Spacer(Modifier.height(8.dp))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SimType.entries.forEach { type ->
+                        FilterChip(
+                            selected = state.simType == type,
+                            onClick = { viewModel.onSimTypeChange(type) },
+                            label = { Text(type.label) },
+                        )
+                    }
+                }
+                state.simTypeError?.let {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
 
             if (state.isNew) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
