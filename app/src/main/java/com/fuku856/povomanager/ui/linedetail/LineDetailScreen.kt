@@ -57,6 +57,7 @@ import com.fuku856.povomanager.domain.LineStatus
 import com.fuku856.povomanager.ui.common.ExpiryProgressBar
 import com.fuku856.povomanager.ui.common.PurchaseSheet
 import com.fuku856.povomanager.ui.common.RemainingDaysBadge
+import com.fuku856.povomanager.ui.common.SimTypeChip
 import com.fuku856.povomanager.ui.common.SwipeDismissSnackbarHost
 import com.fuku856.povomanager.ui.common.displayName
 import com.fuku856.povomanager.ui.common.formatPhoneNumber
@@ -223,10 +224,16 @@ private fun StatusCard(status: LineStatus, expiryPeriodDays: Int) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column {
-                    Text(
-                        formatPhoneNumber(status.line.phoneNumber),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            formatPhoneNumber(status.line.phoneNumber),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                        status.line.simType?.let {
+                            Spacer(Modifier.width(8.dp))
+                            SimTypeChip(it)
+                        }
+                    }
                     status.line.memo?.let {
                         Text(
                             it,

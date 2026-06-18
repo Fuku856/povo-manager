@@ -43,4 +43,25 @@ class MigrationTest {
             assertEquals(0, cursor.getInt(0))
         }
     }
+
+    @Test
+    fun migrate2To3_addsSimTypeColumnDefaultingToNull() {
+        // v2 スキーマ(simType 列なし)でDBを作成し、既存行を1件入れる。
+        helper.createDatabase(testDb, 2).apply {
+            execSQL(
+                "INSERT INTO lines (phoneNumber, name, notifyDaysOverride, memo, sortOrder, isArchived) " +
+                    "VALUES ('09012345678', 'メイン', NULL, NULL, 0, 0)",
+            )
+            close()
+        }
+
+        // v3 へマイグレーション。
+        val db = helper.runMigrationsAndValidate(testDb, 3, true, MIGRATION_2_3)
+
+        // 既存行は追加列 simType が NULL(未設定)になる。
+        db.query("SELECT simType FROM lines WHERE phoneNumber = '09012345678'").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertTrue(cursor.isNull(0))
+        }
+    }
 }

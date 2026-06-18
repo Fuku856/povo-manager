@@ -45,6 +45,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -53,6 +54,7 @@ import com.fuku856.povomanager.ui.common.ArchiveGreen
 import com.fuku856.povomanager.ui.common.ExpiryProgressBar
 import com.fuku856.povomanager.ui.common.PurchaseSheet
 import com.fuku856.povomanager.ui.common.RemainingDaysBadge
+import com.fuku856.povomanager.ui.common.SimTypeChip
 import com.fuku856.povomanager.ui.common.SwipeDismissSnackbarHost
 import com.fuku856.povomanager.ui.common.SwipeToArchiveBox
 import com.fuku856.povomanager.ui.common.displayName
@@ -188,7 +190,19 @@ private fun LineCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(status.line.displayName, style = MaterialTheme.typography.titleMedium)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            status.line.displayName,
+                            style = MaterialTheme.typography.titleMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
+                        )
+                        status.line.simType?.let {
+                            Spacer(Modifier.width(8.dp))
+                            SimTypeChip(it)
+                        }
+                    }
                     if (!status.line.name.isNullOrBlank()) {
                         Text(
                             formatPhoneNumber(status.line.phoneNumber),

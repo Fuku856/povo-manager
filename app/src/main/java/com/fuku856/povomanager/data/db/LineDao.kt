@@ -108,7 +108,9 @@ interface LineDao {
         lines.forEachIndexed { index, line ->
             val existing = getLineByPhone(line.phoneNumber)
             val targetId = if (existing != null) {
-                updateLine(line.copy(id = existing.id))
+                // SIM種別はこの機能より前のバックアップには無いため、取り込み側がnullの
+                // 場合は既存の値を維持する(旧バックアップのMERGEで消さない)。
+                updateLine(line.copy(id = existing.id, simType = line.simType ?: existing.simType))
                 existing.id
             } else {
                 insertLine(line.copy(id = 0))
