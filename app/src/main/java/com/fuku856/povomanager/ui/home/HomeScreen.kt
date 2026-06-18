@@ -57,6 +57,7 @@ import com.fuku856.povomanager.ui.common.SwipeDismissSnackbarHost
 import com.fuku856.povomanager.ui.common.SwipeToArchiveBox
 import com.fuku856.povomanager.ui.common.displayName
 import com.fuku856.povomanager.ui.common.formatPhoneNumber
+import com.fuku856.povomanager.ui.common.showUndoSnackbar
 import com.fuku856.povomanager.ui.common.toDisplayString
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
@@ -76,7 +77,7 @@ fun HomeScreen(
 
     LaunchedEffect(Unit) {
         viewModel.purchaseAdded.collect { purchase ->
-            val result = snackbarHostState.showSnackbar(
+            val result = snackbarHostState.showUndoSnackbar(
                 message = "購入を記録しました",
                 actionLabel = "取り消す",
             )
@@ -88,7 +89,7 @@ fun HomeScreen(
 
     LaunchedEffect(Unit) {
         viewModel.archivedEvent.collect { lineId ->
-            val result = snackbarHostState.showSnackbar(
+            val result = snackbarHostState.showUndoSnackbar(
                 message = "アーカイブしました",
                 actionLabel = "取り消す",
             )

@@ -60,6 +60,7 @@ import com.fuku856.povomanager.ui.common.RemainingDaysBadge
 import com.fuku856.povomanager.ui.common.SwipeDismissSnackbarHost
 import com.fuku856.povomanager.ui.common.displayName
 import com.fuku856.povomanager.ui.common.formatPhoneNumber
+import com.fuku856.povomanager.ui.common.showUndoSnackbar
 import com.fuku856.povomanager.ui.common.toDisplayString
 import java.time.ZoneId
 
@@ -86,14 +87,22 @@ fun LineDetailScreen(
         viewModel.events.collect { event ->
             when (event) {
                 is PurchaseEvent.Added -> {
-                    val result = snackbarHostState.showSnackbar("購入を記録しました", actionLabel = "取り消す")
+                    val result = snackbarHostState.showUndoSnackbar("購入を記録しました", actionLabel = "取り消す")
                     if (result == SnackbarResult.ActionPerformed) viewModel.undoPurchase(event.purchase)
                 }
                 is PurchaseEvent.Deleted -> {
-                    val result = snackbarHostState.showSnackbar("履歴を削除しました", actionLabel = "元に戻す")
+                    val result = snackbarHostState.showUndoSnackbar("履歴を削除しました", actionLabel = "元に戻す")
                     if (result == SnackbarResult.ActionPerformed) viewModel.restorePurchase(event.purchase)
                 }
             }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.archiveEvent.collect { nowArchived ->
+            val message = if (nowArchived) "アーカイブしました" else "アーカイブを解除しました"
+            val result = snackbarHostState.showUndoSnackbar(message, actionLabel = "取り消す")
+            if (result == SnackbarResult.ActionPerformed) viewModel.setArchivedSilently(!nowArchived)
         }
     }
 
@@ -111,7 +120,7 @@ fun LineDetailScreen(
                 actions = {
                     status?.let { current ->
                         val archived = current.line.isArchived
-                        IconButton(onClick = { viewModel.toggleArchive(onBack) }) {
+                        IconButton(onClick = { viewModel.toggleArchive() }) {
                             Icon(
                                 if (archived) Icons.Default.Unarchive else Icons.Default.Archive,
                                 contentDescription = if (archived) "アーカイブ解除" else "アーカイブ",
