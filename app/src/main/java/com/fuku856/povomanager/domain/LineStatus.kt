@@ -35,6 +35,10 @@ fun LineWithPurchases.toStatus(settings: AppSettings, today: LocalDate): LineSta
 }
 
 /** 有効期間中(今日が有効期限以前)のトッピングのうち、期限が最も近いものを返す */
+/** 一覧表示用。状態に変換し、残日数の少ない順(購入記録なしは末尾)に並べる */
+fun List<LineWithPurchases>.toStatusesByExpiry(settings: AppSettings, today: LocalDate): List<LineStatus> =
+    map { it.toStatus(settings, today) }.sortedWith(compareBy(nullsLast()) { it.daysRemaining })
+
 fun activeTopping(purchases: List<ToppingPurchase>, today: LocalDate): ToppingPurchase? =
     purchases
         .filter { it.validityEndDate != null && !it.validityEndDate.isBefore(today) }

@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.fuku856.povomanager.data.LineRepository
 import com.fuku856.povomanager.data.settings.SettingsRepository
 import com.fuku856.povomanager.domain.LineStatus
-import com.fuku856.povomanager.domain.toStatus
+import com.fuku856.povomanager.domain.toStatusesByExpiry
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -31,19 +31,13 @@ class ArchivedLinesViewModel @Inject constructor(
             repository.observeArchivedLinesWithPurchases(),
             settingsRepository.settings,
         ) { lines, settings ->
-            val today = LocalDate.now()
             ArchivedUiState(
-                statuses = lines
-                    .map { it.toStatus(settings, today) }
-                    .sortedWith(compareBy(nullsLast()) { it.daysRemaining }),
+                statuses = lines.toStatusesByExpiry(settings, LocalDate.now()),
                 loaded = true,
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ArchivedUiState())
 
     fun unarchive(lineId: Long) {
-        viewModelScope.launch {
-            val line = repository.getLine(lineId) ?: return@launch
-            repository.setArchived(line, false)
-        }
+        viewModelScope.launch { repository.setArchived(lineId, false) }
     }
 }
