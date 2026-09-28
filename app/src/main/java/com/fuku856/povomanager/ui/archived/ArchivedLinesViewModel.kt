@@ -7,9 +7,11 @@ import com.fuku856.povomanager.data.settings.SettingsRepository
 import com.fuku856.povomanager.domain.LineStatus
 import com.fuku856.povomanager.domain.toStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -40,10 +42,23 @@ class ArchivedLinesViewModel @Inject constructor(
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ArchivedUiState())
 
+    /** 取り消し用にアーカイブ解除した回線IDを流すイベント */
+    private val _unarchivedEvent = Channel<Long>(Channel.BUFFERED)
+    val unarchivedEvent = _unarchivedEvent.receiveAsFlow()
+
     fun unarchive(lineId: Long) {
         viewModelScope.launch {
             val line = repository.getLine(lineId) ?: return@launch
             repository.setArchived(line, false)
+            _unarchivedEvent.send(lineId)
+        }
+    }
+
+    /** 取り消し。スナップショットではなく最新を取り直し、アーカイブ状態だけ戻す */
+    fun rearchive(lineId: Long) {
+        viewModelScope.launch {
+            val line = repository.getLine(lineId) ?: return@launch
+            repository.setArchived(line, true)
         }
     }
 }
