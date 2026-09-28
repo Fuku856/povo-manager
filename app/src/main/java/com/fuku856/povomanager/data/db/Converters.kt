@@ -1,6 +1,7 @@
 package com.fuku856.povomanager.data.db
 
 import androidx.room.TypeConverter
+import com.fuku856.povomanager.domain.SimType
 import java.time.LocalDate
 
 class Converters {
@@ -21,4 +22,13 @@ class Converters {
         // 不正・空白トークンが混入しても落ちないよう toIntOrNull で防御する
         else -> value.split(",").mapNotNull { it.trim().toIntOrNull() }.toSet()
     }
+
+    /** SIM種別は enum 名で保存。null=未設定 */
+    @TypeConverter
+    fun simTypeToString(simType: SimType?): String? = simType?.name
+
+    @TypeConverter
+    fun stringToSimType(value: String?): SimType? =
+        // 不明な値(将来の追加列や破損データ)で落ちないよう防御する
+        value?.let { runCatching { SimType.valueOf(it) }.getOrNull() }
 }

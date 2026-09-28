@@ -9,6 +9,7 @@ import com.fuku856.povomanager.data.db.PovoLine
 import com.fuku856.povomanager.data.db.ToppingPurchase
 import com.fuku856.povomanager.data.settings.AppSettings
 import com.fuku856.povomanager.data.settings.SettingsRepository
+import com.fuku856.povomanager.domain.SimType
 import com.fuku856.povomanager.ui.LineEditRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,6 +27,8 @@ data class LineEditUiState(
     val phoneNumber: String = "",
     val name: String = "",
     val memo: String = "",
+    /** SIM種別。新規・編集とも保存には必須(null は保存不可) */
+    val simType: SimType? = null,
     val overrideEnabled: Boolean = false,
     val overrideDays: Set<Int> = emptySet(),
     val defaultNotifyDays: Set<Int> = AppSettings.DEFAULT_NOTIFY_DAYS,
@@ -33,6 +36,7 @@ data class LineEditUiState(
     val recordInitialPurchase: Boolean = true,
     val initialPurchaseDate: LocalDate = LocalDate.now(),
     val phoneError: String? = null,
+    val simTypeError: String? = null,
 )
 
 @HiltViewModel
@@ -64,6 +68,8 @@ class LineEditViewModel @Inject constructor(
                         phoneNumber = handle[KEY_PHONE] ?: "",
                         name = handle[KEY_NAME] ?: "",
                         memo = handle[KEY_MEMO] ?: "",
+                        simType = handle.get<String>(KEY_SIM_TYPE)
+                            ?.let { runCatching { SimType.valueOf(it) }.getOrNull() },
                         overrideEnabled = handle[KEY_OVERRIDE_ENABLED] ?: false,
                         overrideDays = (handle.get<IntArray>(KEY_OVERRIDE_DAYS) ?: IntArray(0)).toSet(),
                         recordInitialPurchase = handle[KEY_RECORD_INITIAL] ?: true,
@@ -79,6 +85,7 @@ class LineEditViewModel @Inject constructor(
                         phoneNumber = line?.phoneNumber ?: "",
                         name = line?.name ?: "",
                         memo = line?.memo ?: "",
+                        simType = line?.simType,
                         overrideEnabled = line?.notifyDaysOverride != null,
                         overrideDays = line?.notifyDaysOverride ?: settings.defaultNotifyDays,
                     )
@@ -94,6 +101,7 @@ class LineEditViewModel @Inject constructor(
         handle[KEY_PHONE] = newState.phoneNumber
         handle[KEY_NAME] = newState.name
         handle[KEY_MEMO] = newState.memo
+        handle[KEY_SIM_TYPE] = newState.simType?.name
         handle[KEY_OVERRIDE_ENABLED] = newState.overrideEnabled
         handle[KEY_OVERRIDE_DAYS] = newState.overrideDays.toIntArray()
         handle[KEY_RECORD_INITIAL] = newState.recordInitialPurchase
@@ -106,6 +114,8 @@ class LineEditViewModel @Inject constructor(
     fun onNameChange(value: String) = updateDraft { it.copy(name = value) }
 
     fun onMemoChange(value: String) = updateDraft { it.copy(memo = value) }
+
+    fun onSimTypeChange(type: SimType) = updateDraft { it.copy(simType = type, simTypeError = null) }
 
     fun onOverrideEnabledChange(enabled: Boolean) = updateDraft { it.copy(overrideEnabled = enabled) }
 
@@ -123,8 +133,12 @@ class LineEditViewModel @Inject constructor(
     fun save(onSaved: () -> Unit) {
         val state = _uiState.value
         val phone = state.phoneNumber
-        if (phone.length !in 10..11 || !phone.startsWith("0")) {
-            _uiState.update { it.copy(phoneError = "0から始まる10〜11桁の電話番号を入力してください") }
+        val phoneError = if (phone.length !in 10..11 || !phone.startsWith("0")) {
+            "0から始まる10〜11桁の電話番号を入力してください"
+        } else null
+        val simTypeError = if (state.simType == null) "SIM種別を選択してください" else null
+        if (phoneError != null || simTypeError != null) {
+            _uiState.update { it.copy(phoneError = phoneError, simTypeError = simTypeError) }
             return
         }
         viewModelScope.launch {
@@ -132,6 +146,7 @@ class LineEditViewModel @Inject constructor(
                 phoneNumber = phone,
                 name = state.name.trim().ifBlank { null },
                 memo = state.memo.trim().ifBlank { null },
+                simType = state.simType,
                 notifyDaysOverride = if (state.overrideEnabled) state.overrideDays else null,
             )
             if (state.isNew) {
@@ -167,6 +182,7 @@ class LineEditViewModel @Inject constructor(
         const val KEY_PHONE = "draft_phone"
         const val KEY_NAME = "draft_name"
         const val KEY_MEMO = "draft_memo"
+        const val KEY_SIM_TYPE = "draft_sim_type"
         const val KEY_OVERRIDE_ENABLED = "draft_override_enabled"
         const val KEY_OVERRIDE_DAYS = "draft_override_days"
         const val KEY_RECORD_INITIAL = "draft_record_initial"

@@ -11,9 +11,19 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface LineDao {
 
+    /** ホーム表示用。アーカイブ済みは除外 */
     @Transaction
-    @Query("SELECT * FROM lines ORDER BY sortOrder, id")
-    fun observeLinesWithPurchases(): Flow<List<LineWithPurchases>>
+    @Query("SELECT * FROM lines WHERE isArchived = 0 ORDER BY sortOrder, id")
+    fun observeActiveLinesWithPurchases(): Flow<List<LineWithPurchases>>
+
+    /** アーカイブ済み一覧画面用 */
+    @Transaction
+    @Query("SELECT * FROM lines WHERE isArchived = 1 ORDER BY sortOrder, id")
+    fun observeArchivedLinesWithPurchases(): Flow<List<LineWithPurchases>>
+
+    /** アーカイブ済み件数。ホームの「アーカイブ済みを表示」ボタン表示判定用(行は読み込まない) */
+    @Query("SELECT COUNT(*) FROM lines WHERE isArchived = 1")
+    fun observeArchivedCount(): Flow<Int>
 
     @Transaction
     @Query("SELECT * FROM lines WHERE id = :lineId")
@@ -22,6 +32,11 @@ interface LineDao {
     @Transaction
     @Query("SELECT * FROM lines ORDER BY sortOrder, id")
     suspend fun getLinesWithPurchases(): List<LineWithPurchases>
+
+    /** 通知・ウィジェット用。アーカイブ済みは除外 */
+    @Transaction
+    @Query("SELECT * FROM lines WHERE isArchived = 0 ORDER BY sortOrder, id")
+    suspend fun getActiveLinesWithPurchases(): List<LineWithPurchases>
 
     @Query("SELECT * FROM lines WHERE id = :lineId")
     suspend fun getLine(lineId: Long): PovoLine?
@@ -40,6 +55,9 @@ interface LineDao {
 
     @Query("UPDATE lines SET sortOrder = :order WHERE id = :id")
     suspend fun updateLineSortOrder(id: Long, order: Int)
+
+    @Query("UPDATE lines SET isArchived = :archived WHERE id = :id")
+    suspend fun updateArchived(id: Long, archived: Boolean)
 
     /** 並び順を一括更新する。中途半端な並びが残らないようトランザクションで囲む。 */
     @Transaction
@@ -83,13 +101,26 @@ interface LineDao {
      * インポート時のマージ(上書き)。既存データは削除しない。
      * 電話番号が一致する回線は情報を更新し、一致しない回線は新規追加する。
      * 購入履歴は (購入日, トッピング名, 有効期限) が完全一致するものは重複追加しない。
+     * [keepArchivedIndices] に含まれる回線は、既存回線のアーカイブ状態を維持する。
      */
     @Transaction
-    suspend fun mergeImport(lines: List<PovoLine>, purchasesByLineIndex: Map<Int, List<ToppingPurchase>>) {
+    suspend fun mergeImport(
+        lines: List<PovoLine>,
+        purchasesByLineIndex: Map<Int, List<ToppingPurchase>>,
+        keepArchivedIndices: Set<Int> = emptySet(),
+    ) {
         lines.forEachIndexed { index, line ->
             val existing = getLineByPhone(line.phoneNumber)
             val targetId = if (existing != null) {
-                updateLine(line.copy(id = existing.id))
+                // SIM種別・アーカイブ状態はこの機能より前のバックアップには無いため、
+                // 取り込み側に無い場合は既存の値を維持する(旧バックアップのMERGEで消さない)。
+                updateLine(
+                    line.copy(
+                        id = existing.id,
+                        simType = line.simType ?: existing.simType,
+                        isArchived = if (index in keepArchivedIndices) existing.isArchived else line.isArchived,
+                    ),
+                )
                 existing.id
             } else {
                 insertLine(line.copy(id = 0))

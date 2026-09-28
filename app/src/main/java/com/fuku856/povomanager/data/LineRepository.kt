@@ -14,12 +14,25 @@ class LineRepository @Inject constructor(
     private val dao: LineDao,
     private val widgetUpdater: WidgetUpdater,
 ) {
-    fun observeLinesWithPurchases(): Flow<List<LineWithPurchases>> = dao.observeLinesWithPurchases()
+    /** ホーム表示用。アーカイブ済みは除外 */
+    fun observeActiveLinesWithPurchases(): Flow<List<LineWithPurchases>> =
+        dao.observeActiveLinesWithPurchases()
+
+    /** アーカイブ済み一覧画面用 */
+    fun observeArchivedLinesWithPurchases(): Flow<List<LineWithPurchases>> =
+        dao.observeArchivedLinesWithPurchases()
+
+    /** アーカイブ済み件数のみを監視する(行は読み込まない) */
+    fun observeArchivedCount(): Flow<Int> = dao.observeArchivedCount()
 
     fun observeLineWithPurchases(lineId: Long): Flow<LineWithPurchases?> =
         dao.observeLineWithPurchases(lineId)
 
     suspend fun getLinesWithPurchases(): List<LineWithPurchases> = dao.getLinesWithPurchases()
+
+    /** 通知・ウィジェット用。アーカイブ済みは除外 */
+    suspend fun getActiveLinesWithPurchases(): List<LineWithPurchases> =
+        dao.getActiveLinesWithPurchases()
 
     suspend fun getLine(lineId: Long): PovoLine? = dao.getLine(lineId)
 
@@ -33,6 +46,15 @@ class LineRepository @Inject constructor(
 
     suspend fun deleteLine(line: PovoLine) {
         dao.deleteLine(line)
+        widgetUpdater.updateAll()
+    }
+
+    /**
+     * 回線のアーカイブ状態だけを変更する。行全体を書き戻さないため、
+     * 同時に走る編集・インポートの内容を古い値で上書きしない。
+     */
+    suspend fun setArchived(lineId: Long, archived: Boolean) {
+        dao.updateArchived(lineId, archived)
         widgetUpdater.updateAll()
     }
 
@@ -64,11 +86,15 @@ class LineRepository @Inject constructor(
         widgetUpdater.updateAll()
     }
 
-    /** インポート時のマージ(上書き)。既存データは保持し、電話番号一致で更新・それ以外は追加 */
-    suspend fun mergeImport(data: List<LineWithPurchases>) {
+    /**
+     * インポート時のマージ(上書き)。既存データは保持し、電話番号一致で更新・それ以外は追加。
+     * @param keepArchivedIndices 既存回線のアーカイブ状態を維持する回線の添字(旧形式のバックアップ由来)
+     */
+    suspend fun mergeImport(data: List<LineWithPurchases>, keepArchivedIndices: Set<Int> = emptySet()) {
         dao.mergeImport(
             lines = data.map { it.line.copy(id = 0) },
             purchasesByLineIndex = data.withIndex().associate { (index, item) -> index to item.purchases },
+            keepArchivedIndices = keepArchivedIndices,
         )
         widgetUpdater.updateAll()
     }

@@ -14,9 +14,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddShoppingCart
+import androidx.compose.material.icons.filled.Archive
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.SimCard
 import androidx.compose.material3.Card
@@ -29,10 +31,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -47,11 +49,14 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.fuku856.povomanager.domain.LineStatus
+import com.fuku856.povomanager.ui.common.ArchiveGreen
 import com.fuku856.povomanager.ui.common.ExpiryProgressBar
 import com.fuku856.povomanager.ui.common.PurchaseSheet
+import com.fuku856.povomanager.ui.common.LineHeader
 import com.fuku856.povomanager.ui.common.RemainingDaysBadge
-import com.fuku856.povomanager.ui.common.displayName
-import com.fuku856.povomanager.ui.common.formatPhoneNumber
+import com.fuku856.povomanager.ui.common.SwipeDismissSnackbarHost
+import com.fuku856.povomanager.ui.common.SwipeToArchiveBox
+import com.fuku856.povomanager.ui.common.showUndoSnackbar
 import com.fuku856.povomanager.ui.common.toDisplayString
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
@@ -62,6 +67,7 @@ fun HomeScreen(
     onLineClick: (Long) -> Unit,
     onAddLine: () -> Unit,
     onSettings: () -> Unit,
+    onShowArchived: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -70,12 +76,24 @@ fun HomeScreen(
 
     LaunchedEffect(Unit) {
         viewModel.purchaseAdded.collect { purchase ->
-            val result = snackbarHostState.showSnackbar(
+            val result = snackbarHostState.showUndoSnackbar(
                 message = "購入を記録しました",
                 actionLabel = "取り消す",
             )
             if (result == SnackbarResult.ActionPerformed) {
                 viewModel.undoPurchase(purchase)
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.archivedEvent.collect { lineId ->
+            val result = snackbarHostState.showUndoSnackbar(
+                message = "アーカイブしました",
+                actionLabel = "取り消す",
+            )
+            if (result == SnackbarResult.ActionPerformed) {
+                viewModel.unarchive(lineId)
             }
         }
     }
@@ -98,23 +116,42 @@ fun HomeScreen(
                 text = { Text("回線を追加") },
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { SwipeDismissSnackbarHost(snackbarHostState) },
     ) { innerPadding ->
         if (uiState.loaded && uiState.statuses.isEmpty()) {
-            EmptyState(modifier = Modifier.fillMaxSize().padding(innerPadding))
+            EmptyState(
+                modifier = Modifier.fillMaxSize().padding(innerPadding),
+                archivedCount = uiState.archivedCount,
+                onShowArchived = onShowArchived,
+            )
         } else {
+            val listState = rememberLazyListState()
             LazyColumn(
+                state = listState,
                 modifier = Modifier.fillMaxSize().padding(innerPadding),
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 items(uiState.statuses, key = { it.line.id }) { status ->
-                    LineCard(
-                        status = status,
-                        expiryPeriodDays = uiState.expiryPeriodDays,
-                        onClick = { onLineClick(status.line.id) },
-                        onRecordPurchase = { purchaseTargetLineId = status.line.id },
-                    )
+                    SwipeToArchiveBox(
+                        onArchive = { viewModel.archiveLine(status.line.id) },
+                        scrollInProgress = { listState.isScrollInProgress },
+                    ) {
+                        LineCard(
+                            status = status,
+                            expiryPeriodDays = uiState.expiryPeriodDays,
+                            onClick = { onLineClick(status.line.id) },
+                            onRecordPurchase = { purchaseTargetLineId = status.line.id },
+                        )
+                    }
+                }
+                if (uiState.archivedCount > 0) {
+                    item(key = "archived-button") {
+                        ShowArchivedButton(
+                            count = uiState.archivedCount,
+                            onClick = onShowArchived,
+                        )
+                    }
                 }
             }
         }
@@ -149,16 +186,7 @@ private fun LineCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(status.line.displayName, style = MaterialTheme.typography.titleMedium)
-                    if (!status.line.name.isNullOrBlank()) {
-                        Text(
-                            formatPhoneNumber(status.line.phoneNumber),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
+                LineHeader(status.line, modifier = Modifier.weight(1f))
                 RemainingDaysBadge(status.daysRemaining)
             }
 
@@ -207,6 +235,17 @@ private fun LineCard(
 }
 
 @Composable
+private fun ShowArchivedButton(count: Int, onClick: () -> Unit) {
+    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        TextButton(onClick = onClick) {
+            Icon(Icons.Default.Archive, contentDescription = null, tint = ArchiveGreen, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("アーカイブ($count)")
+        }
+    }
+}
+
+@Composable
 private fun LabeledDate(label: String, date: LocalDate?) {
     Column {
         Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -215,7 +254,11 @@ private fun LabeledDate(label: String, date: LocalDate?) {
 }
 
 @Composable
-private fun EmptyState(modifier: Modifier = Modifier) {
+private fun EmptyState(
+    modifier: Modifier = Modifier,
+    archivedCount: Int = 0,
+    onShowArchived: () -> Unit = {},
+) {
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(
@@ -233,6 +276,11 @@ private fun EmptyState(modifier: Modifier = Modifier) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
+            // アクティブな回線が無くてもアーカイブ済みがあれば一覧への導線を残す
+            if (archivedCount > 0) {
+                Spacer(Modifier.height(16.dp))
+                ShowArchivedButton(count = archivedCount, onClick = onShowArchived)
+            }
         }
     }
 }

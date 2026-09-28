@@ -9,7 +9,7 @@ import com.fuku856.povomanager.data.backup.ImportMode
 import com.fuku856.povomanager.data.backup.ImportPreviewLine
 import com.fuku856.povomanager.data.settings.AppSettings
 import com.fuku856.povomanager.data.settings.SettingsRepository
-import com.fuku856.povomanager.domain.toStatus
+import com.fuku856.povomanager.domain.toStatusesByExpiry
 import com.fuku856.povomanager.notifications.NotificationScheduler
 import com.fuku856.povomanager.ui.common.displayName
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -49,8 +49,11 @@ class SettingsViewModel @Inject constructor(
     val settings: StateFlow<AppSettings> = settingsRepository.settings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AppSettings())
 
-    /** ウィジェット手動並び替え用の回線一覧(DAOのsortOrder順で流れてくる) */
-    val widgetLines: StateFlow<List<WidgetLineRow>> = lineRepository.observeLinesWithPurchases()
+    /**
+     * ウィジェット手動並び替え用の回線一覧(DAOのsortOrder順で流れてくる)。
+     * アーカイブ済みはウィジェットに出ないため並び替え対象からも除外する。
+     */
+    val widgetLines: StateFlow<List<WidgetLineRow>> = lineRepository.observeActiveLinesWithPurchases()
         .map { list -> list.map { WidgetLineRow(it.line.id, it.line.displayName) } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -133,13 +136,10 @@ class SettingsViewModel @Inject constructor(
             // 初回ON時、sortOrderが未設定(全件同値)なら現在の「期限の早い順」をシードして、
             // 手動リストの初期並びが直前のウィジェット表示と一致するようにする。
             if (enabled) {
-                val lines = lineRepository.getLinesWithPurchases()
+                val lines = lineRepository.getActiveLinesWithPurchases()
                 if (lines.size > 1 && lines.map { it.line.sortOrder }.distinct().size <= 1) {
-                    val settings = settingsRepository.current()
-                    val today = LocalDate.now()
                     val orderedIds = lines
-                        .map { it.toStatus(settings, today) }
-                        .sortedWith(compareBy(nullsLast()) { it.daysRemaining })
+                        .toStatusesByExpiry(settingsRepository.current(), LocalDate.now())
                         .map { it.line.id }
                     lineRepository.setLineOrder(orderedIds)
                 }

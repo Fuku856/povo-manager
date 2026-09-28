@@ -6,6 +6,7 @@ import com.fuku856.povomanager.data.LineRepository
 import com.fuku856.povomanager.data.db.LineWithPurchases
 import com.fuku856.povomanager.data.db.PovoLine
 import com.fuku856.povomanager.data.db.ToppingPurchase
+import com.fuku856.povomanager.domain.SimType
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -40,7 +41,11 @@ data class BackupLine(
     val name: String? = null,
     val memo: String? = null,
     val notifyDaysOverride: List<Int>? = null,
+    /** SIM種別の enum 名(PHYSICAL/ESIM)。未設定や旧形式は null */
+    val simType: String? = null,
     val sortOrder: Int = 0,
+    /** アーカイブ済みか。アーカイブ機能より前の形式には無く null(MERGE では既存の状態を維持する) */
+    val isArchived: Boolean? = null,
     val purchases: List<BackupPurchase> = emptyList(),
 )
 
@@ -98,7 +103,11 @@ class BackupManager @Inject constructor(
         val entities = backup.lines.map { it.toEntity() }
         when (mode) {
             ImportMode.REPLACE -> repository.replaceAll(entities)
-            ImportMode.MERGE -> repository.mergeImport(entities)
+            ImportMode.MERGE -> repository.mergeImport(
+                data = entities,
+                // アーカイブ状態を持たない旧形式の回線は、既存回線のアーカイブ状態を上書きしない
+                keepArchivedIndices = backup.lines.indices.filter { backup.lines[it].isArchived == null }.toSet(),
+            )
         }
         backup.lines.size
     }
@@ -121,7 +130,9 @@ class BackupManager @Inject constructor(
         name = line.name,
         memo = line.memo,
         notifyDaysOverride = line.notifyDaysOverride?.toList(),
+        simType = line.simType?.name,
         sortOrder = line.sortOrder,
+        isArchived = line.isArchived,
         purchases = purchases.map {
             BackupPurchase(
                 purchaseDate = it.purchaseDate.toString(),
@@ -137,7 +148,10 @@ class BackupManager @Inject constructor(
             name = name,
             memo = memo,
             notifyDaysOverride = notifyDaysOverride?.toSet(),
+            // 不明な値で落ちないよう防御する(将来の種別追加・破損データ対策)
+            simType = simType?.let { runCatching { SimType.valueOf(it) }.getOrNull() },
             sortOrder = sortOrder,
+            isArchived = isArchived ?: false,
         ),
         purchases = purchases.map {
             ToppingPurchase(
