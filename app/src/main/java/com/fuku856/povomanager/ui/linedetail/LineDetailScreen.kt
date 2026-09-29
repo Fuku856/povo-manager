@@ -36,8 +36,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -58,12 +56,9 @@ import com.fuku856.povomanager.ui.common.ExpiryProgressBar
 import com.fuku856.povomanager.ui.common.PurchaseSheet
 import com.fuku856.povomanager.ui.common.RemainingDaysBadge
 import com.fuku856.povomanager.ui.common.SimTypeChip
-import com.fuku856.povomanager.ui.common.SwipeDismissSnackbarHost
 import com.fuku856.povomanager.ui.common.displayName
 import com.fuku856.povomanager.ui.common.formatPhoneNumber
-import com.fuku856.povomanager.ui.common.showUndoSnackbar
 import com.fuku856.povomanager.ui.common.toDisplayString
-import kotlinx.coroutines.flow.collectLatest
 import java.time.ZoneId
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -75,7 +70,6 @@ fun LineDetailScreen(
     viewModel: LineDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     var showAddSheet by remember { mutableStateOf(false) }
     var editingPurchase by remember { mutableStateOf<ToppingPurchase?>(null) }
@@ -83,29 +77,6 @@ fun LineDetailScreen(
     // 回線が削除された場合は自動で戻る
     LaunchedEffect(uiState.loaded, uiState.status) {
         if (uiState.loaded && uiState.status == null) onBack()
-    }
-
-    LaunchedEffect(Unit) {
-        viewModel.events.collectLatest { event ->
-            when (event) {
-                is PurchaseEvent.Added -> {
-                    val result = snackbarHostState.showUndoSnackbar("購入を記録しました", actionLabel = "取り消す")
-                    if (result == SnackbarResult.ActionPerformed) viewModel.undoPurchase(event.purchase)
-                }
-                is PurchaseEvent.Deleted -> {
-                    val result = snackbarHostState.showUndoSnackbar("履歴を削除しました", actionLabel = "元に戻す")
-                    if (result == SnackbarResult.ActionPerformed) viewModel.restorePurchase(event.purchase)
-                }
-            }
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        viewModel.archiveEvent.collectLatest { nowArchived ->
-            val message = if (nowArchived) "アーカイブしました" else "アーカイブを解除しました"
-            val result = snackbarHostState.showUndoSnackbar(message, actionLabel = "取り消す")
-            if (result == SnackbarResult.ActionPerformed) viewModel.setArchivedSilently(!nowArchived)
-        }
     }
 
     val status = uiState.status
@@ -135,7 +106,6 @@ fun LineDetailScreen(
                 },
             )
         },
-        snackbarHost = { SwipeDismissSnackbarHost(snackbarHostState) },
     ) { innerPadding ->
         if (status == null) {
             Box(Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {

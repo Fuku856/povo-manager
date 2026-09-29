@@ -31,12 +31,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,6 +41,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -54,11 +53,9 @@ import com.fuku856.povomanager.ui.common.ExpiryProgressBar
 import com.fuku856.povomanager.ui.common.PurchaseSheet
 import com.fuku856.povomanager.ui.common.LineHeader
 import com.fuku856.povomanager.ui.common.RemainingDaysBadge
-import com.fuku856.povomanager.ui.common.SwipeDismissSnackbarHost
+import com.fuku856.povomanager.ui.common.ReserveSnackbarBottomSpace
 import com.fuku856.povomanager.ui.common.SwipeToArchiveBox
-import com.fuku856.povomanager.ui.common.showUndoSnackbar
 import com.fuku856.povomanager.ui.common.toDisplayString
-import kotlinx.coroutines.flow.collectLatest
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
@@ -72,32 +69,13 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
     var purchaseTargetLineId by remember { mutableStateOf<Long?>(null) }
 
-    LaunchedEffect(Unit) {
-        viewModel.purchaseAdded.collectLatest { purchase ->
-            val result = snackbarHostState.showUndoSnackbar(
-                message = "購入を記録しました",
-                actionLabel = "取り消す",
-            )
-            if (result == SnackbarResult.ActionPerformed) {
-                viewModel.undoPurchase(purchase)
-            }
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        viewModel.archivedEvent.collectLatest { lineId ->
-            val result = snackbarHostState.showUndoSnackbar(
-                message = "アーカイブしました",
-                actionLabel = "取り消す",
-            )
-            if (result == SnackbarResult.ActionPerformed) {
-                viewModel.unarchive(lineId)
-            }
-        }
-    }
+    // 取り消しトーストはアプリ全体で1つ(PovoApp)で、この Scaffold の外に出る。
+    // FAB に重ならないよう、FAB の高さ + FAB 下の余白の分だけトーストを持ち上げる。
+    val density = LocalDensity.current
+    var fabHeight by remember { mutableStateOf(0.dp) }
+    ReserveSnackbarBottomSpace(fabHeight + FabBottomSpacing)
 
     Scaffold(
         topBar = {
@@ -115,9 +93,9 @@ fun HomeScreen(
                 onClick = onAddLine,
                 icon = { Icon(Icons.Default.Add, contentDescription = null) },
                 text = { Text("回線を追加") },
+                modifier = Modifier.onSizeChanged { fabHeight = with(density) { it.height.toDp() } },
             )
         },
-        snackbarHost = { SwipeDismissSnackbarHost(snackbarHostState) },
     ) { innerPadding ->
         if (uiState.loaded && uiState.statuses.isEmpty()) {
             EmptyState(
@@ -169,6 +147,9 @@ fun HomeScreen(
         )
     }
 }
+
+/** Scaffold が FAB と画面下端(ナビゲーションバーの上)の間に空ける余白 */
+private val FabBottomSpacing = 16.dp
 
 @Composable
 private fun LineCard(
