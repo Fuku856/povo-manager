@@ -1,5 +1,6 @@
 package com.fuku856.povomanager.ui.common
 
+import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -60,6 +61,16 @@ class UndoController internal constructor(
     fun onClosed(request: UndoRequest, undoRequested: Boolean) {
         // 既に次の要求に置き換わっていたら、そちらは消さない
         _current.compareAndSet(request, null)
-        if (undoRequested) scope.launch { request.undo() }
+        if (!undoRequested) return
+        scope.launch {
+            // 取り消しはトーストの表示中に変わった状態(回線の削除など)に対して走ることがある。
+            // 失敗してもアプリ寿命のスコープで例外を投げてアプリごと落とさない。
+            runCatching { request.undo() }
+                .onFailure { Log.w(TAG, "取り消しに失敗しました", it) }
+        }
+    }
+
+    private companion object {
+        const val TAG = "UndoController"
     }
 }

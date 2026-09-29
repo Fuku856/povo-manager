@@ -84,7 +84,10 @@ class LineDetailViewModel @Inject constructor(
         viewModelScope.launch {
             repository.deletePurchase(purchase)
             undoController.show("履歴を削除しました", actionLabel = "元に戻す") {
-                repository.addPurchase(purchase.copy(id = 0))
+                // トーストが残っている間に回線ごと削除されていたら戻さない(外部キー違反になるため)
+                if (repository.getLine(purchase.lineId) != null) {
+                    repository.addPurchase(purchase.copy(id = 0))
+                }
             }
         }
     }
