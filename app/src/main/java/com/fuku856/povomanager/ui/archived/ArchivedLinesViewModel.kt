@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.fuku856.povomanager.data.LineRepository
 import com.fuku856.povomanager.data.settings.SettingsRepository
 import com.fuku856.povomanager.domain.LineStatus
-import com.fuku856.povomanager.domain.toStatus
+import com.fuku856.povomanager.domain.toStatusesByExpiry
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.SharingStarted
@@ -33,11 +33,8 @@ class ArchivedLinesViewModel @Inject constructor(
             repository.observeArchivedLinesWithPurchases(),
             settingsRepository.settings,
         ) { lines, settings ->
-            val today = LocalDate.now()
             ArchivedUiState(
-                statuses = lines
-                    .map { it.toStatus(settings, today) }
-                    .sortedWith(compareBy(nullsLast()) { it.daysRemaining }),
+                statuses = lines.toStatusesByExpiry(settings, LocalDate.now()),
                 loaded = true,
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ArchivedUiState())
@@ -51,16 +48,13 @@ class ArchivedLinesViewModel @Inject constructor(
             val line = repository.getLine(lineId) ?: return@launch
             // 解除ボタンの連打などで二重に呼ばれてもトーストを重ねない
             if (!line.isArchived) return@launch
-            repository.setArchived(line, false)
+            repository.setArchived(lineId, false)
             _unarchivedEvent.send(lineId)
         }
     }
 
-    /** 取り消し。スナップショットではなく最新を取り直し、アーカイブ状態だけ戻す */
+    /** 取り消し。アーカイブ状態だけを戻す */
     fun rearchive(lineId: Long) {
-        viewModelScope.launch {
-            val line = repository.getLine(lineId) ?: return@launch
-            repository.setArchived(line, true)
-        }
+        viewModelScope.launch { repository.setArchived(lineId, true) }
     }
 }

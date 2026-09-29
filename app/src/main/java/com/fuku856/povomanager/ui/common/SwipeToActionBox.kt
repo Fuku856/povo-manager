@@ -28,8 +28,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -98,17 +100,23 @@ fun SwipeToActionBox(
     }
     val isOpen by remember { derivedStateOf { offsetX.value < -1f } }
 
+    // 確定タップ後、閉じきるまでは再タップで onAction が二重に走らないようにする。
+    // 閉じるアニメーション中も開き量が確定しきい値を超えている間は canConfirm が true のため。
+    var actionFired by remember { mutableStateOf(false) }
+
+    suspend fun animateSettle(open: Boolean, initialVelocity: Float = 0f) {
+        offsetX.animateTo(
+            targetValue = if (open) -actionWidthPx else 0f,
+            animationSpec = spring(
+                dampingRatio = SwipeTuning.SettleDampingRatio,
+                stiffness = SwipeTuning.SettleStiffness,
+            ),
+            initialVelocity = initialVelocity,
+        )
+    }
+
     fun settle(open: Boolean, initialVelocity: Float = 0f) {
-        scope.launch {
-            offsetX.animateTo(
-                targetValue = if (open) -actionWidthPx else 0f,
-                animationSpec = spring(
-                    dampingRatio = SwipeTuning.SettleDampingRatio,
-                    stiffness = SwipeTuning.SettleStiffness,
-                ),
-                initialVelocity = initialVelocity,
-            )
-        }
+        scope.launch { animateSettle(open, initialVelocity) }
     }
 
     // 開いた状態でページをスクロールしたら閉じる。snapshotFlow でスクロール状態の変化だけを
@@ -142,9 +150,17 @@ fun SwipeToActionBox(
                     .fillMaxHeight()
                     .width(SwipeTuning.ActionWidth)
                     // 半分以上開いているときだけタップで確定(誤タップ防止)
-                    .clickable(enabled = canConfirm) {
+                    .clickable(enabled = canConfirm && !actionFired) {
+                        actionFired = true
                         onAction()
-                        settle(open = false)
+                        scope.launch {
+                            // 途中でドラッグ等に割り込まれて中断されても必ず解除する
+                            try {
+                                animateSettle(open = false)
+                            } finally {
+                                actionFired = false
+                            }
+                        }
                     },
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally,

@@ -13,6 +13,8 @@ import com.fuku856.povomanager.domain.toStatus
 import com.fuku856.povomanager.ui.LineDetailRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -55,9 +57,12 @@ class LineDetailViewModel @Inject constructor(
     private val _events = Channel<PurchaseEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
 
-    /** アーカイブ状態が変わったことの通知。true=アーカイブ, false=解除。undo スナックバー表示用。 */
-    private val _archiveEvent = Channel<Boolean>(Channel.BUFFERED)
-    val archiveEvent = _archiveEvent.receiveAsFlow()
+    /**
+     * アーカイブ状態が変わったことの通知。true=アーカイブ, false=解除。undo スナックバー表示用。
+     * 画面を離れている間(購読者なし)のイベントは破棄し、古い取り消しトーストを出さない。
+     */
+    private val _archiveEvent = MutableSharedFlow<Boolean>(extraBufferCapacity = 16)
+    val archiveEvent: SharedFlow<Boolean> = _archiveEvent
 
     fun recordPurchase(date: LocalDate, toppingName: String, validityEndDate: LocalDate?) {
         viewModelScope.launch {
@@ -85,17 +90,14 @@ class LineDetailViewModel @Inject constructor(
         viewModelScope.launch {
             val line = repository.getLine(lineId) ?: return@launch
             val nowArchived = !line.isArchived
-            repository.setArchived(line, nowArchived)
-            _archiveEvent.send(nowArchived)
+            repository.setArchived(lineId, nowArchived)
+            _archiveEvent.emit(nowArchived)
         }
     }
 
     /** undo 用。イベントを発行せずにアーカイブ状態を設定する(スナックバーの連鎖を防ぐ)。 */
     fun setArchivedSilently(archived: Boolean) {
-        viewModelScope.launch {
-            val line = repository.getLine(lineId) ?: return@launch
-            repository.setArchived(line, archived)
-        }
+        viewModelScope.launch { repository.setArchived(lineId, archived) }
     }
 
     fun deletePurchase(purchase: ToppingPurchase) {
