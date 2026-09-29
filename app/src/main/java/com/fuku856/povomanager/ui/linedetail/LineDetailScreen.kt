@@ -63,6 +63,7 @@ import com.fuku856.povomanager.ui.common.displayName
 import com.fuku856.povomanager.ui.common.formatPhoneNumber
 import com.fuku856.povomanager.ui.common.showUndoSnackbar
 import com.fuku856.povomanager.ui.common.toDisplayString
+import kotlinx.coroutines.flow.collectLatest
 import java.time.ZoneId
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -85,7 +86,7 @@ fun LineDetailScreen(
     }
 
     LaunchedEffect(Unit) {
-        viewModel.events.collect { event ->
+        viewModel.events.collectLatest { event ->
             when (event) {
                 is PurchaseEvent.Added -> {
                     val result = snackbarHostState.showUndoSnackbar("購入を記録しました", actionLabel = "取り消す")
@@ -100,7 +101,7 @@ fun LineDetailScreen(
     }
 
     LaunchedEffect(Unit) {
-        viewModel.archiveEvent.collect { nowArchived ->
+        viewModel.archiveEvent.collectLatest { nowArchived ->
             val message = if (nowArchived) "アーカイブしました" else "アーカイブを解除しました"
             val result = snackbarHostState.showUndoSnackbar(message, actionLabel = "取り消す")
             if (result == SnackbarResult.ActionPerformed) viewModel.setArchivedSilently(!nowArchived)
