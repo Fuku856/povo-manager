@@ -56,8 +56,9 @@ interface LineDao {
     @Query("UPDATE lines SET sortOrder = :order WHERE id = :id")
     suspend fun updateLineSortOrder(id: Long, order: Int)
 
-    @Query("UPDATE lines SET isArchived = :archived WHERE id = :id")
-    suspend fun updateArchived(id: Long, archived: Boolean)
+    /** @return 変更した行数。既にその状態・回線が無いときは 0 */
+    @Query("UPDATE lines SET isArchived = :archived WHERE id = :id AND isArchived != :archived")
+    suspend fun updateArchived(id: Long, archived: Boolean): Int
 
     /** 並び順を一括更新する。中途半端な並びが残らないようトランザクションで囲む。 */
     @Transaction

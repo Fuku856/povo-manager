@@ -26,6 +26,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -38,6 +39,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.fuku856.povomanager.domain.LineStatus
 import com.fuku856.povomanager.ui.common.LineHeader
 import com.fuku856.povomanager.ui.common.RemainingDaysBadge
+import com.fuku856.povomanager.ui.common.SwipeDismissSnackbarHost
 import com.fuku856.povomanager.ui.common.SwipeToActionBox
 import com.fuku856.povomanager.ui.common.toDisplayString
 
@@ -46,6 +48,7 @@ import com.fuku856.povomanager.ui.common.toDisplayString
 fun ArchivedLinesScreen(
     onBack: () -> Unit,
     onLineClick: (Long) -> Unit,
+    snackbarHostState: SnackbarHostState,
     viewModel: ArchivedLinesViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -61,6 +64,7 @@ fun ArchivedLinesScreen(
                 },
             )
         },
+        snackbarHost = { SwipeDismissSnackbarHost(snackbarHostState) },
     ) { innerPadding ->
         if (uiState.loaded && uiState.statuses.isEmpty()) {
             EmptyState(modifier = Modifier.fillMaxSize().padding(innerPadding))
@@ -69,7 +73,8 @@ fun ArchivedLinesScreen(
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize().padding(innerPadding),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
+                // 下の余白は取り消しトーストの高さ分。表示中も最後のカードまでスクロールで出せるようにする
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 items(uiState.statuses, key = { it.line.id }) { status ->

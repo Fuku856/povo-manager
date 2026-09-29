@@ -6,6 +6,7 @@ import com.fuku856.povomanager.data.LineRepository
 import com.fuku856.povomanager.data.settings.SettingsRepository
 import com.fuku856.povomanager.domain.LineStatus
 import com.fuku856.povomanager.domain.toStatusesByExpiry
+import com.fuku856.povomanager.ui.common.UndoController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -24,6 +25,7 @@ data class ArchivedUiState(
 class ArchivedLinesViewModel @Inject constructor(
     private val repository: LineRepository,
     settingsRepository: SettingsRepository,
+    private val undoController: UndoController,
 ) : ViewModel() {
 
     val uiState: StateFlow<ArchivedUiState> =
@@ -38,6 +40,10 @@ class ArchivedLinesViewModel @Inject constructor(
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ArchivedUiState())
 
     fun unarchive(lineId: Long) {
-        viewModelScope.launch { repository.setArchived(lineId, false) }
+        viewModelScope.launch {
+            // 連打などで二重に呼ばれても、状態が実際に変わったときだけトーストを出す
+            if (!repository.setArchived(lineId, false)) return@launch
+            undoController.show("アーカイブを解除しました") { repository.setArchived(lineId, true) }
+        }
     }
 }

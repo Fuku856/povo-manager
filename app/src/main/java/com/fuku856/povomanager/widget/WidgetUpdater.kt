@@ -52,6 +52,14 @@ class WidgetUpdater @Inject constructor(
         completedGen.first { it >= myGen }
     }
 
+    /**
+     * 更新を要求だけして、描画の完了は待たない。画面操作など、完了を待つ必要のない呼び出し元向け。
+     * 描画は [updateAll] と同じくアプリ寿命スコープで走り切り、コンフレーションされる。
+     */
+    fun requestUpdate() {
+        scope.launch { updateAll() }
+    }
+
     /** 未処理の要求がある間だけ描画を繰り返す。バースト分は1〜2回の描画にまとめられる。 */
     private suspend fun renderLoop() {
         while (true) {

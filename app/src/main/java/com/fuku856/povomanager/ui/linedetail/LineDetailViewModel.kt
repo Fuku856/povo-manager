@@ -11,14 +11,11 @@ import com.fuku856.povomanager.data.settings.SettingsRepository
 import com.fuku856.povomanager.domain.LineStatus
 import com.fuku856.povomanager.domain.toStatus
 import com.fuku856.povomanager.ui.LineDetailRoute
+import com.fuku856.povomanager.ui.common.UndoController
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -31,16 +28,12 @@ data class LineDetailUiState(
     val expiryPeriodDays: Int = AppSettings.DEFAULT_EXPIRY_PERIOD_DAYS,
 )
 
-sealed interface PurchaseEvent {
-    data class Added(val purchase: ToppingPurchase) : PurchaseEvent
-    data class Deleted(val purchase: ToppingPurchase) : PurchaseEvent
-}
-
 @HiltViewModel
 class LineDetailViewModel @Inject constructor(
     private val repository: LineRepository,
     settingsRepository: SettingsRepository,
     savedStateHandle: SavedStateHandle,
+    private val undoController: UndoController,
 ) : ViewModel() {
 
     private val lineId: Long = savedStateHandle.toRoute<LineDetailRoute>().lineId
@@ -54,16 +47,6 @@ class LineDetailViewModel @Inject constructor(
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LineDetailUiState())
 
-    private val _events = Channel<PurchaseEvent>(Channel.BUFFERED)
-    val events = _events.receiveAsFlow()
-
-    /**
-     * アーカイブ状態が変わったことの通知。true=アーカイブ, false=解除。undo スナックバー表示用。
-     * 画面を離れている間(購読者なし)のイベントは破棄し、古い取り消しトーストを出さない。
-     */
-    private val _archiveEvent = MutableSharedFlow<Boolean>(extraBufferCapacity = 16)
-    val archiveEvent: SharedFlow<Boolean> = _archiveEvent
-
     fun recordPurchase(date: LocalDate, toppingName: String, validityEndDate: LocalDate?) {
         viewModelScope.launch {
             val purchase = ToppingPurchase(
@@ -72,8 +55,8 @@ class LineDetailViewModel @Inject constructor(
                 toppingName = toppingName,
                 validityEndDate = validityEndDate,
             )
-            val id = repository.addPurchase(purchase)
-            _events.send(PurchaseEvent.Added(purchase.copy(id = id)))
+            val added = purchase.copy(id = repository.addPurchase(purchase))
+            undoController.show("購入を記録しました") { repository.deletePurchase(added) }
         }
     }
 
@@ -85,33 +68,27 @@ class LineDetailViewModel @Inject constructor(
         }
     }
 
-    /** アーカイブ状態をトグルし、結果を [archiveEvent] で通知する(undo スナックバー用)。 */
+    /** アーカイブ状態をトグルし、取り消しトーストを出す。 */
     fun toggleArchive() {
         viewModelScope.launch {
             val line = repository.getLine(lineId) ?: return@launch
             val nowArchived = !line.isArchived
-            repository.setArchived(lineId, nowArchived)
-            _archiveEvent.emit(nowArchived)
+            if (!repository.setArchived(lineId, nowArchived)) return@launch
+            undoController.show(if (nowArchived) "アーカイブしました" else "アーカイブを解除しました") {
+                repository.setArchived(lineId, !nowArchived)
+            }
         }
-    }
-
-    /** undo 用。イベントを発行せずにアーカイブ状態を設定する(スナックバーの連鎖を防ぐ)。 */
-    fun setArchivedSilently(archived: Boolean) {
-        viewModelScope.launch { repository.setArchived(lineId, archived) }
     }
 
     fun deletePurchase(purchase: ToppingPurchase) {
         viewModelScope.launch {
             repository.deletePurchase(purchase)
-            _events.send(PurchaseEvent.Deleted(purchase))
+            undoController.show("履歴を削除しました", actionLabel = "元に戻す") {
+                // トーストが残っている間に回線ごと削除されていたら戻さない(外部キー違反になるため)
+                if (repository.getLine(purchase.lineId) != null) {
+                    repository.addPurchase(purchase.copy(id = 0))
+                }
+            }
         }
-    }
-
-    fun restorePurchase(purchase: ToppingPurchase) {
-        viewModelScope.launch { repository.addPurchase(purchase.copy(id = 0)) }
-    }
-
-    fun undoPurchase(purchase: ToppingPurchase) {
-        viewModelScope.launch { repository.deletePurchase(purchase) }
     }
 }

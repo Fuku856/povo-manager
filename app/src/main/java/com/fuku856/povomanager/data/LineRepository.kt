@@ -9,6 +9,11 @@ import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * 回線・購入履歴の読み書き。書き込み後のウィジェット更新は要求だけして描画の完了を待たない
+ * (画面の反応やトーストを描画で遅らせない)。描画完了を待つ必要がある Worker などは
+ * [WidgetUpdater.updateAll] を直接呼ぶ。
+ */
 @Singleton
 class LineRepository @Inject constructor(
     private val dao: LineDao,
@@ -37,44 +42,46 @@ class LineRepository @Inject constructor(
     suspend fun getLine(lineId: Long): PovoLine? = dao.getLine(lineId)
 
     suspend fun addLine(line: PovoLine): Long =
-        dao.insertLine(line).also { widgetUpdater.updateAll() }
+        dao.insertLine(line).also { widgetUpdater.requestUpdate() }
 
     suspend fun updateLine(line: PovoLine) {
         dao.updateLine(line)
-        widgetUpdater.updateAll()
+        widgetUpdater.requestUpdate()
     }
 
     suspend fun deleteLine(line: PovoLine) {
         dao.deleteLine(line)
-        widgetUpdater.updateAll()
+        widgetUpdater.requestUpdate()
     }
 
     /**
      * 回線のアーカイブ状態だけを変更する。行全体を書き戻さないため、
      * 同時に走る編集・インポートの内容を古い値で上書きしない。
+     * @return 状態が実際に変わったら true(既にその状態・回線が無いときは false)
      */
-    suspend fun setArchived(lineId: Long, archived: Boolean) {
-        dao.updateArchived(lineId, archived)
-        widgetUpdater.updateAll()
+    suspend fun setArchived(lineId: Long, archived: Boolean): Boolean {
+        val changed = dao.updateArchived(lineId, archived) > 0
+        if (changed) widgetUpdater.requestUpdate()
+        return changed
     }
 
     /** ウィジェットの手動並び替え順を保存する。リストの並び順を sortOrder として書き込む。 */
     suspend fun setLineOrder(orderedIds: List<Long>) {
         dao.updateLineSortOrders(orderedIds)
-        widgetUpdater.updateAll()
+        widgetUpdater.requestUpdate()
     }
 
     suspend fun addPurchase(purchase: ToppingPurchase): Long =
-        dao.insertPurchase(purchase).also { widgetUpdater.updateAll() }
+        dao.insertPurchase(purchase).also { widgetUpdater.requestUpdate() }
 
     suspend fun updatePurchase(purchase: ToppingPurchase) {
         dao.updatePurchase(purchase)
-        widgetUpdater.updateAll()
+        widgetUpdater.requestUpdate()
     }
 
     suspend fun deletePurchase(purchase: ToppingPurchase) {
         dao.deletePurchase(purchase)
-        widgetUpdater.updateAll()
+        widgetUpdater.requestUpdate()
     }
 
     /** インポート時の全置換。linesと購入履歴はインデックスで対応付け */
@@ -83,7 +90,7 @@ class LineRepository @Inject constructor(
             lines = data.map { it.line.copy(id = 0) },
             purchasesByLineIndex = data.withIndex().associate { (index, item) -> index to item.purchases },
         )
-        widgetUpdater.updateAll()
+        widgetUpdater.requestUpdate()
     }
 
     /**
@@ -96,6 +103,6 @@ class LineRepository @Inject constructor(
             purchasesByLineIndex = data.withIndex().associate { (index, item) -> index to item.purchases },
             keepArchivedIndices = keepArchivedIndices,
         )
-        widgetUpdater.updateAll()
+        widgetUpdater.requestUpdate()
     }
 }
