@@ -6,12 +6,11 @@ import com.fuku856.povomanager.data.LineRepository
 import com.fuku856.povomanager.data.settings.SettingsRepository
 import com.fuku856.povomanager.domain.LineStatus
 import com.fuku856.povomanager.domain.toStatusesByExpiry
+import com.fuku856.povomanager.ui.common.UndoController
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -26,6 +25,7 @@ data class ArchivedUiState(
 class ArchivedLinesViewModel @Inject constructor(
     private val repository: LineRepository,
     settingsRepository: SettingsRepository,
+    private val undoController: UndoController,
 ) : ViewModel() {
 
     val uiState: StateFlow<ArchivedUiState> =
@@ -39,22 +39,11 @@ class ArchivedLinesViewModel @Inject constructor(
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ArchivedUiState())
 
-    /** 取り消し用にアーカイブ解除した回線IDを流すイベント */
-    private val _unarchivedEvent = Channel<Long>(Channel.BUFFERED)
-    val unarchivedEvent = _unarchivedEvent.receiveAsFlow()
-
     fun unarchive(lineId: Long) {
         viewModelScope.launch {
-            val line = repository.getLine(lineId) ?: return@launch
-            // 解除ボタンの連打などで二重に呼ばれてもトーストを重ねない
-            if (!line.isArchived) return@launch
-            repository.setArchived(lineId, false)
-            _unarchivedEvent.send(lineId)
+            // 連打などで二重に呼ばれても、状態が実際に変わったときだけトーストを出す
+            if (!repository.setArchived(lineId, false)) return@launch
+            undoController.show("アーカイブを解除しました") { repository.setArchived(lineId, true) }
         }
-    }
-
-    /** 取り消し。アーカイブ状態だけを戻す */
-    fun rearchive(lineId: Long) {
-        viewModelScope.launch { repository.setArchived(lineId, true) }
     }
 }

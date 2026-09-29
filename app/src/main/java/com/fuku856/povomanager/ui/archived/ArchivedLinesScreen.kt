@@ -27,12 +27,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -44,31 +41,17 @@ import com.fuku856.povomanager.ui.common.LineHeader
 import com.fuku856.povomanager.ui.common.RemainingDaysBadge
 import com.fuku856.povomanager.ui.common.SwipeDismissSnackbarHost
 import com.fuku856.povomanager.ui.common.SwipeToActionBox
-import com.fuku856.povomanager.ui.common.showUndoSnackbar
 import com.fuku856.povomanager.ui.common.toDisplayString
-import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ArchivedLinesScreen(
     onBack: () -> Unit,
     onLineClick: (Long) -> Unit,
+    snackbarHostState: SnackbarHostState,
     viewModel: ArchivedLinesViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
-
-    LaunchedEffect(Unit) {
-        viewModel.unarchivedEvent.collectLatest { lineId ->
-            val result = snackbarHostState.showUndoSnackbar(
-                message = "アーカイブを解除しました",
-                actionLabel = "取り消す",
-            )
-            if (result == SnackbarResult.ActionPerformed) {
-                viewModel.rearchive(lineId)
-            }
-        }
-    }
 
     Scaffold(
         topBar = {
@@ -90,7 +73,8 @@ fun ArchivedLinesScreen(
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize().padding(innerPadding),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
+                // 下の余白は取り消しトーストの高さ分。表示中も最後のカードまでスクロールで出せるようにする
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 items(uiState.statuses, key = { it.line.id }) { status ->

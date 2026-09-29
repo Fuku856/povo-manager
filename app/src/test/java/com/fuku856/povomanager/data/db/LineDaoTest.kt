@@ -71,12 +71,23 @@ class LineDaoTest {
             PovoLine(phoneNumber = "09012345678", name = "メイン", simType = SimType.PHYSICAL, sortOrder = 3),
         )
 
-        dao.updateArchived(id, true)
+        assertEquals(1, dao.updateArchived(id, true))
 
         val line = dao.getLine(id)!!
         assertTrue(line.isArchived)
         assertEquals("メイン", line.name)
         assertEquals(SimType.PHYSICAL, line.simType)
         assertEquals(3, line.sortOrder)
+    }
+
+    @Test
+    fun updateArchived_returnsZero_whenAlreadyInStateOrMissing() = runBlocking {
+        val id = dao.insertLine(PovoLine(phoneNumber = "09012345678", isArchived = true))
+
+        // 連打などで二重に呼ばれたケース。状態は変わらないので 0 を返す
+        assertEquals(0, dao.updateArchived(id, true))
+        assertTrue(dao.getLine(id)!!.isArchived)
+        // 削除済みの回線
+        assertEquals(0, dao.updateArchived(id + 100, false))
     }
 }

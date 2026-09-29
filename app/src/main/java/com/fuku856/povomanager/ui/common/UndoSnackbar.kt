@@ -3,30 +3,29 @@ package com.fuku856.povomanager.ui.common
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import kotlinx.coroutines.withTimeoutOrNull
-
-/** 操作後の「取り消す」トーストが自動的に消えるまでの時間(ミリ秒)。 */
-const val UNDO_SNACKBAR_TIMEOUT_MS = 5_000L
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 
 /**
- * 「取り消す」などアクション付きのスナックバーを表示する。
+ * [UndoController] の要求を [hostState] にトーストとして表示する。
+ * 画面遷移で消えないよう、NavHost の外(アプリ全体)で1回だけ呼ぶ。
  *
- * Material3 の [SnackbarHostState.showSnackbar] は actionLabel を渡すと duration が
- * 既定で [SnackbarDuration.Indefinite] になり、手動で閉じるまで残り続ける。本関数は
- * [timeoutMillis] 経過で自動的に閉じる(スワイプで閉じた場合も含め [SnackbarResult.Dismissed])。
- * アクションがタップされた場合のみ [SnackbarResult.ActionPerformed] を返す。
- *
- * 表示中のスナックバーがあれば閉じてから出す(置き換え)。既定の [showSnackbar] は前のものが
- * 消えるまで待つため、連続操作すると古い操作のトーストが残り、「取り消す」が直前の操作ではなく
- * 古い操作に効いてしまう。呼び出し側も collectLatest で受け、同じイベント列の前の表示を打ち切ること。
+ * 表示時間は [UndoController] が管理する。要求が置き換わる・期限切れで消えると LaunchedEffect が
+ * キャンセルされ、表示中のトーストも閉じる。画面回転などで作り直されたときは、残っている要求を出し直す。
  */
-suspend fun SnackbarHostState.showUndoSnackbar(
-    message: String,
-    actionLabel: String,
-    timeoutMillis: Long = UNDO_SNACKBAR_TIMEOUT_MS,
-): SnackbarResult {
-    currentSnackbarData?.dismiss()
-    return withTimeoutOrNull(timeoutMillis) {
-        showSnackbar(message, actionLabel = actionLabel, duration = SnackbarDuration.Indefinite)
-    } ?: SnackbarResult.Dismissed
+@Composable
+fun UndoSnackbarEffect(controller: UndoController, hostState: SnackbarHostState) {
+    val request by controller.current.collectAsState()
+    LaunchedEffect(request) {
+        val current = request ?: return@LaunchedEffect
+        val result = hostState.showSnackbar(
+            current.message,
+            actionLabel = current.actionLabel,
+            duration = SnackbarDuration.Indefinite,
+        )
+        // スワイプで閉じた場合は Dismissed
+        controller.onClosed(current, undoRequested = result == SnackbarResult.ActionPerformed)
+    }
 }
