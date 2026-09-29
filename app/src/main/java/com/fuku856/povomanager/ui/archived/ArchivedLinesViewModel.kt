@@ -49,6 +49,8 @@ class ArchivedLinesViewModel @Inject constructor(
     fun unarchive(lineId: Long) {
         viewModelScope.launch {
             val line = repository.getLine(lineId) ?: return@launch
+            // 解除ボタンの連打などで二重に呼ばれてもトーストを重ねない
+            if (!line.isArchived) return@launch
             repository.setArchived(line, false)
             _unarchivedEvent.send(lineId)
         }

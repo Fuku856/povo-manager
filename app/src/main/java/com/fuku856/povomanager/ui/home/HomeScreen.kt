@@ -61,6 +61,7 @@ import com.fuku856.povomanager.ui.common.displayName
 import com.fuku856.povomanager.ui.common.formatPhoneNumber
 import com.fuku856.povomanager.ui.common.showUndoSnackbar
 import com.fuku856.povomanager.ui.common.toDisplayString
+import kotlinx.coroutines.flow.collectLatest
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 
@@ -78,7 +79,7 @@ fun HomeScreen(
     var purchaseTargetLineId by remember { mutableStateOf<Long?>(null) }
 
     LaunchedEffect(Unit) {
-        viewModel.purchaseAdded.collect { purchase ->
+        viewModel.purchaseAdded.collectLatest { purchase ->
             val result = snackbarHostState.showUndoSnackbar(
                 message = "購入を記録しました",
                 actionLabel = "取り消す",
@@ -90,7 +91,7 @@ fun HomeScreen(
     }
 
     LaunchedEffect(Unit) {
-        viewModel.archivedEvent.collect { lineId ->
+        viewModel.archivedEvent.collectLatest { lineId ->
             val result = snackbarHostState.showUndoSnackbar(
                 message = "アーカイブしました",
                 actionLabel = "取り消す",

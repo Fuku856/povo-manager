@@ -78,6 +78,8 @@ class HomeViewModel @Inject constructor(
     fun archiveLine(lineId: Long) {
         viewModelScope.launch {
             val line = repository.getLine(lineId) ?: return@launch
+            // アーカイブボタンの連打などで二重に呼ばれてもトーストを重ねない
+            if (line.isArchived) return@launch
             repository.setArchived(line, true)
             _archivedEvent.send(lineId)
         }

@@ -50,6 +50,7 @@ import com.fuku856.povomanager.ui.common.displayName
 import com.fuku856.povomanager.ui.common.formatPhoneNumber
 import com.fuku856.povomanager.ui.common.showUndoSnackbar
 import com.fuku856.povomanager.ui.common.toDisplayString
+import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,7 +63,7 @@ fun ArchivedLinesScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
-        viewModel.unarchivedEvent.collect { lineId ->
+        viewModel.unarchivedEvent.collectLatest { lineId ->
             val result = snackbarHostState.showUndoSnackbar(
                 message = "アーカイブを解除しました",
                 actionLabel = "取り消す",
