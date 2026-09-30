@@ -1,6 +1,9 @@
 package com.fuku856.povomanager.ui.common
 
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SwipeToDismissBox
@@ -17,12 +20,16 @@ import androidx.compose.ui.Modifier
  * スワイプで確定した時点で [androidx.compose.material3.SnackbarData.dismiss] を呼び、
  * ホストに「閉じる」を通知する。各スナックバーごとにスワイプ状態をリセットするため
  * [key] で `data` を境界にする。
+ *
+ * ダークモードでは既定の inverse 配色(明るい帯)が暗い画面で眩しいため、暗い帯にする。
  */
 @Composable
 fun SwipeDismissSnackbarHost(
     hostState: SnackbarHostState,
     modifier: Modifier = Modifier,
 ) {
+    val dark = isSystemInDarkTheme()
+    val colors = MaterialTheme.colorScheme
     SnackbarHost(hostState, modifier) { data ->
         key(data) {
             val dismissState = rememberSwipeToDismissBoxState(
@@ -39,7 +46,12 @@ fun SwipeDismissSnackbarHost(
                 state = dismissState,
                 backgroundContent = {},
             ) {
-                Snackbar(data)
+                Snackbar(
+                    data,
+                    containerColor = if (dark) colors.surfaceContainerHighest else SnackbarDefaults.color,
+                    contentColor = if (dark) colors.onSurface else SnackbarDefaults.contentColor,
+                    actionColor = if (dark) colors.primary else SnackbarDefaults.actionColor,
+                )
             }
         }
     }
