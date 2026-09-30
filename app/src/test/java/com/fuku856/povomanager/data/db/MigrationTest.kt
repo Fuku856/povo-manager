@@ -64,4 +64,32 @@ class MigrationTest {
             assertTrue(cursor.isNull(0))
         }
     }
+
+    @Test
+    fun migrate3To4_addsTimeColumnsDefaultingToNull() {
+        // v3 スキーマ(時刻列なし)でDBを作成し、回線と購入履歴を1件ずつ入れる。
+        helper.createDatabase(testDb, 3).apply {
+            execSQL(
+                "INSERT INTO lines (id, phoneNumber, name, notifyDaysOverride, memo, sortOrder, isArchived, simType) " +
+                    "VALUES (1, '09012345678', 'メイン', NULL, NULL, 0, 0, 'ESIM')",
+            )
+            execSQL(
+                "INSERT INTO topping_purchases (lineId, purchaseDate, toppingName, validityEndDate) " +
+                    "VALUES (1, 20000, 'データ追加1GB(7日間)', 20006)",
+            )
+            close()
+        }
+
+        // v4 へマイグレーション。
+        val db = helper.runMigrationsAndValidate(testDb, 4, true, MIGRATION_3_4)
+
+        // 既存の購入は日付を保ったまま、追加列 purchaseTime / validityEndTime が NULL(時刻なし)になる。
+        db.query("SELECT purchaseDate, validityEndDate, purchaseTime, validityEndTime FROM topping_purchases").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals(20000L, cursor.getLong(0))
+            assertEquals(20006L, cursor.getLong(1))
+            assertTrue(cursor.isNull(2))
+            assertTrue(cursor.isNull(3))
+        }
+    }
 }

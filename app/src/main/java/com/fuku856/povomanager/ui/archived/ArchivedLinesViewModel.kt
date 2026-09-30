@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.LocalDate
+import java.time.LocalDateTime
 import javax.inject.Inject
 
 data class ArchivedUiState(
@@ -34,7 +34,7 @@ class ArchivedLinesViewModel @Inject constructor(
             settingsRepository.settings,
         ) { lines, settings ->
             ArchivedUiState(
-                statuses = lines.toStatusesByExpiry(settings, LocalDate.now()),
+                statuses = lines.toStatusesByExpiry(settings, LocalDateTime.now()),
                 loaded = true,
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ArchivedUiState())

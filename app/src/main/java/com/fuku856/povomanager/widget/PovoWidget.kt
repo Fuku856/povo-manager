@@ -50,7 +50,7 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
-import java.time.LocalDate
+import java.time.LocalDateTime
 
 class PovoWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = PovoWidget()
@@ -70,8 +70,7 @@ class PovoWidget : GlanceAppWidget() {
         // アーカイブ済み回線はウィジェットからも除外する
         val lines = entryPoint.lineRepository().getActiveLinesWithPurchases()
         val settings = entryPoint.settingsRepository().current()
-        val today = LocalDate.now()
-        val statuses = lines.map { it.toStatus(settings, today) }
+        val statuses = lines.map { it.toStatus(settings, LocalDateTime.now()) }
         // 手動並び替えONのときはDAOが返すsortOrder順をそのまま使い、OFFのときは期限の早い順。
         val ordered = if (settings.widgetManualOrder) {
             statuses

@@ -12,9 +12,14 @@ import com.fuku856.povomanager.R
 import com.fuku856.povomanager.data.db.PovoLine
 import com.fuku856.povomanager.data.db.ToppingPurchase
 import com.fuku856.povomanager.domain.LineStatus
+import com.fuku856.povomanager.domain.validityEndAt
 import com.fuku856.povomanager.ui.common.displayName
+import com.fuku856.povomanager.ui.common.formatRemaining
 import com.fuku856.povomanager.ui.common.toDisplayString
+import com.fuku856.povomanager.ui.common.validityEndDisplayString
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.time.Duration
+import java.time.LocalDateTime
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -70,13 +75,32 @@ class NotificationHelper @Inject constructor(
     fun notifyToppings(line: PovoLine, toppings: List<ToppingPurchase>) {
         if (toppings.isEmpty()) return
         val detail = toppings.joinToString("、") {
-            "${it.toppingName}(${it.validityEndDate?.toDisplayString()}まで)"
+            "${it.toppingName}(${it.validityEndDisplayString}まで)"
         }
         post(
             channelId = CHANNEL_TOPPING,
             notificationId = toppingNotificationId(line.id),
             lineId = line.id,
             title = "【povo】トッピング期限が近づいています: ${line.displayName}",
+            text = detail,
+        )
+    }
+
+    /**
+     * 「〜時間前」のトッピング期限通知。実際の残り時間を本文に出す。
+     * 日数前の通知と同じIDを使い、回線ごとに最新の内容で置き換える。
+     */
+    fun notifyToppingHours(line: PovoLine, toppings: List<ToppingPurchase>, now: LocalDateTime) {
+        if (toppings.isEmpty()) return
+        val detail = toppings.joinToString("、") { topping ->
+            val remaining = topping.validityEndAt?.let { formatRemaining(Duration.between(now, it)) }
+            "${topping.toppingName}(${topping.validityEndDisplayString}まで・$remaining)"
+        }
+        post(
+            channelId = CHANNEL_TOPPING,
+            notificationId = toppingNotificationId(line.id),
+            lineId = line.id,
+            title = "【povo】トッピングの期限が迫っています: ${line.displayName}",
             text = detail,
         )
     }

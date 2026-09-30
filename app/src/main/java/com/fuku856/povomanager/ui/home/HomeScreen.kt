@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.fuku856.povomanager.domain.LineStatus
+import com.fuku856.povomanager.domain.validityEndAt
 import com.fuku856.povomanager.ui.common.ArchiveGreen
 import com.fuku856.povomanager.ui.common.ExpiryProgressBar
 import com.fuku856.povomanager.ui.common.PurchaseSheet
@@ -54,8 +55,12 @@ import com.fuku856.povomanager.ui.common.LineHeader
 import com.fuku856.povomanager.ui.common.RemainingDaysBadge
 import com.fuku856.povomanager.ui.common.SwipeDismissSnackbarHost
 import com.fuku856.povomanager.ui.common.SwipeToArchiveBox
+import com.fuku856.povomanager.ui.common.formatRemaining
 import com.fuku856.povomanager.ui.common.toDisplayString
+import com.fuku856.povomanager.ui.common.validityEndDisplayString
+import java.time.Duration
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -113,6 +118,7 @@ fun HomeScreen(
                         LineCard(
                             status = status,
                             expiryPeriodDays = uiState.expiryPeriodDays,
+                            now = uiState.now,
                             onClick = { onLineClick(status.line.id) },
                             onRecordPurchase = { purchaseTargetLineId = status.line.id },
                         )
@@ -133,8 +139,8 @@ fun HomeScreen(
     purchaseTargetLineId?.let { lineId ->
         PurchaseSheet(
             title = "トッピング購入を記録",
-            onConfirm = { date, name, validityEnd ->
-                viewModel.recordPurchase(lineId, date, name, validityEnd)
+            onConfirm = { purchasedAt, name, validityEnd ->
+                viewModel.recordPurchase(lineId, purchasedAt, name, validityEnd)
                 purchaseTargetLineId = null
             },
             onDismiss = { purchaseTargetLineId = null },
@@ -146,6 +152,7 @@ fun HomeScreen(
 private fun LineCard(
     status: LineStatus,
     expiryPeriodDays: Int,
+    now: LocalDateTime,
     onClick: () -> Unit,
     onRecordPurchase: () -> Unit,
 ) {
@@ -185,10 +192,16 @@ private fun LineCard(
 
             status.activeTopping?.let { topping ->
                 val end = topping.validityEndDate ?: return@let
-                val remaining = ChronoUnit.DAYS.between(LocalDate.now(), end)
+                // 満了時刻のある時間型(データ使い放題など)は時間単位、日数型は日数で残りを出す
+                val endAt = topping.validityEndAt ?: return@let
+                val remaining = if (topping.validityEndTime != null) {
+                    formatRemaining(Duration.between(now, endAt))
+                } else {
+                    "あと${ChronoUnit.DAYS.between(now.toLocalDate(), end)}日"
+                }
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    "${topping.toppingName}: ${end.toDisplayString()}まで(あと${remaining}日)",
+                    "${topping.toppingName}: ${topping.validityEndDisplayString}まで($remaining)",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
                 )

@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.LocalTime
 import javax.inject.Inject
 
 data class LineEditUiState(
@@ -32,11 +33,15 @@ data class LineEditUiState(
     val overrideEnabled: Boolean = false,
     val overrideDays: Set<Int> = emptySet(),
     val defaultNotifyDays: Set<Int> = AppSettings.DEFAULT_NOTIFY_DAYS,
-    /** 新規登録時のみ: 最終トッピング購入日を同時に記録する */
+    /** 新規登録時のみ: 最終トッピング購入日時を同時に記録する */
     val recordInitialPurchase: Boolean = true,
     val initialPurchaseDate: LocalDate = LocalDate.now(),
+    /** 最終トッピング購入時刻。記録する場合は必須(null は保存不可) */
+    val initialPurchaseTime: LocalTime? = null,
     val phoneError: String? = null,
     val simTypeError: String? = null,
+    /** 購入時刻が未選択のまま保存しようとした */
+    val initialPurchaseTimeError: Boolean = false,
 )
 
 @HiltViewModel
@@ -75,6 +80,8 @@ class LineEditViewModel @Inject constructor(
                         recordInitialPurchase = handle[KEY_RECORD_INITIAL] ?: true,
                         initialPurchaseDate = handle.get<Long>(KEY_INITIAL_DATE)
                             ?.let(LocalDate::ofEpochDay) ?: LocalDate.now(),
+                        initialPurchaseTime = handle.get<Int>(KEY_INITIAL_TIME)
+                            ?.let { LocalTime.ofSecondOfDay(it.toLong()) },
                     )
                 }
             } else {
@@ -106,6 +113,7 @@ class LineEditViewModel @Inject constructor(
         handle[KEY_OVERRIDE_DAYS] = newState.overrideDays.toIntArray()
         handle[KEY_RECORD_INITIAL] = newState.recordInitialPurchase
         handle[KEY_INITIAL_DATE] = newState.initialPurchaseDate.toEpochDay()
+        handle[KEY_INITIAL_TIME] = newState.initialPurchaseTime?.toSecondOfDay()
     }
 
     fun onPhoneChange(value: String) =
@@ -130,6 +138,9 @@ class LineEditViewModel @Inject constructor(
     fun onInitialPurchaseDateChange(date: LocalDate) =
         updateDraft { it.copy(initialPurchaseDate = date) }
 
+    fun onInitialPurchaseTimeChange(time: LocalTime) =
+        updateDraft { it.copy(initialPurchaseTime = time, initialPurchaseTimeError = false) }
+
     fun save(onSaved: () -> Unit) {
         val state = _uiState.value
         val phone = state.phoneNumber
@@ -137,8 +148,11 @@ class LineEditViewModel @Inject constructor(
             "0から始まる10〜11桁の電話番号を入力してください"
         } else null
         val simTypeError = if (state.simType == null) "SIM種別を選択してください" else null
-        if (phoneError != null || simTypeError != null) {
-            _uiState.update { it.copy(phoneError = phoneError, simTypeError = simTypeError) }
+        val timeError = state.isNew && state.recordInitialPurchase && state.initialPurchaseTime == null
+        if (phoneError != null || simTypeError != null || timeError) {
+            _uiState.update {
+                it.copy(phoneError = phoneError, simTypeError = simTypeError, initialPurchaseTimeError = timeError)
+            }
             return
         }
         viewModelScope.launch {
@@ -156,6 +170,7 @@ class LineEditViewModel @Inject constructor(
                         ToppingPurchase(
                             lineId = newId,
                             purchaseDate = state.initialPurchaseDate,
+                            purchaseTime = state.initialPurchaseTime,
                             toppingName = "初回登録(最終購入日)",
                         )
                     )
@@ -187,5 +202,6 @@ class LineEditViewModel @Inject constructor(
         const val KEY_OVERRIDE_DAYS = "draft_override_days"
         const val KEY_RECORD_INITIAL = "draft_record_initial"
         const val KEY_INITIAL_DATE = "draft_initial_date"
+        const val KEY_INITIAL_TIME = "draft_initial_time"
     }
 }
