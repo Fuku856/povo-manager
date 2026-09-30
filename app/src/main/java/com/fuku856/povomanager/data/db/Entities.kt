@@ -8,6 +8,7 @@ import androidx.room.PrimaryKey
 import androidx.room.Relation
 import com.fuku856.povomanager.domain.SimType
 import java.time.LocalDate
+import java.time.LocalTime
 
 @Entity(tableName = "lines")
 data class PovoLine(
@@ -45,6 +46,10 @@ data class ToppingPurchase(
     val toppingName: String,
     /** トッピング自体の有効期限(最終日)。自動更新型や不明の場合はnull */
     val validityEndDate: LocalDate? = null,
+    /** 購入時刻。時刻機能より前に記録された購入はnull */
+    val purchaseTime: LocalTime? = null,
+    /** 有効期限の満了時刻(時間型トッピング用)。null=有効期限日の終わり(23:59:59)まで */
+    val validityEndTime: LocalTime? = null,
 )
 
 data class LineWithPurchases(

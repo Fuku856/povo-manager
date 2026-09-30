@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -20,6 +21,8 @@ data class AppSettings(
     val defaultNotifyDays: Set<Int> = DEFAULT_NOTIFY_DAYS,
     /** トッピング有効期限の何日前に通知するか */
     val toppingExpiryNotifyDays: Set<Int> = DEFAULT_TOPPING_NOTIFY_DAYS,
+    /** トッピング有効期限の何時間前に通知するか(通知時刻に関係なくその時刻に通知) */
+    val toppingExpiryNotifyHours: Set<Int> = DEFAULT_TOPPING_NOTIFY_HOURS,
     /** 通知時刻(時、0-23) */
     val notifyHour: Int = DEFAULT_NOTIFY_HOUR,
     /** 通知時刻(分、0-59) */
@@ -32,6 +35,7 @@ data class AppSettings(
     companion object {
         val DEFAULT_NOTIFY_DAYS = setOf(30, 14, 7, 3, 1, 0)
         val DEFAULT_TOPPING_NOTIFY_DAYS = setOf(3, 1)
+        val DEFAULT_TOPPING_NOTIFY_HOURS = setOf(1)
         const val DEFAULT_NOTIFY_HOUR = 9
         const val DEFAULT_NOTIFY_MINUTE = 0
         const val DEFAULT_EXPIRY_PERIOD_DAYS = 180
@@ -39,6 +43,8 @@ data class AppSettings(
         /** 設定画面で選択可能な通知タイミング候補(日前) */
         val NOTIFY_DAY_CHOICES = listOf(60, 30, 14, 7, 3, 1, 0)
         val TOPPING_NOTIFY_DAY_CHOICES = listOf(7, 3, 1, 0)
+        /** 設定画面で選択可能なトッピング通知タイミング候補(時間前) */
+        val TOPPING_NOTIFY_HOUR_CHOICES = listOf(12, 6, 3, 1)
     }
 }
 
@@ -51,10 +57,12 @@ class SettingsRepository @Inject constructor(
     private object Keys {
         val DEFAULT_NOTIFY_DAYS = stringSetPreferencesKey("default_notify_days")
         val TOPPING_NOTIFY_DAYS = stringSetPreferencesKey("topping_notify_days")
+        val TOPPING_NOTIFY_HOURS = stringSetPreferencesKey("topping_notify_hours")
         val NOTIFY_HOUR = intPreferencesKey("notify_hour")
         val NOTIFY_MINUTE = intPreferencesKey("notify_minute")
         val EXPIRY_PERIOD_DAYS = intPreferencesKey("expiry_period_days")
         val WIDGET_MANUAL_ORDER = booleanPreferencesKey("widget_manual_order")
+        val TOPPING_ALERT_LAST_CHECK = longPreferencesKey("topping_alert_last_check")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { prefs ->
@@ -65,6 +73,9 @@ class SettingsRepository @Inject constructor(
             toppingExpiryNotifyDays = prefs[Keys.TOPPING_NOTIFY_DAYS]
                 ?.mapNotNull { it.toIntOrNull() }?.toSet()
                 ?: AppSettings.DEFAULT_TOPPING_NOTIFY_DAYS,
+            toppingExpiryNotifyHours = prefs[Keys.TOPPING_NOTIFY_HOURS]
+                ?.mapNotNull { it.toIntOrNull() }?.toSet()
+                ?: AppSettings.DEFAULT_TOPPING_NOTIFY_HOURS,
             notifyHour = prefs[Keys.NOTIFY_HOUR] ?: AppSettings.DEFAULT_NOTIFY_HOUR,
             notifyMinute = prefs[Keys.NOTIFY_MINUTE] ?: AppSettings.DEFAULT_NOTIFY_MINUTE,
             expiryPeriodDays = prefs[Keys.EXPIRY_PERIOD_DAYS] ?: AppSettings.DEFAULT_EXPIRY_PERIOD_DAYS,
@@ -82,6 +93,10 @@ class SettingsRepository @Inject constructor(
         context.dataStore.edit { it[Keys.TOPPING_NOTIFY_DAYS] = days.map(Int::toString).toSet() }
     }
 
+    suspend fun setToppingExpiryNotifyHours(hours: Set<Int>) {
+        context.dataStore.edit { it[Keys.TOPPING_NOTIFY_HOURS] = hours.map(Int::toString).toSet() }
+    }
+
     suspend fun setNotifyTime(hour: Int, minute: Int) {
         context.dataStore.edit {
             it[Keys.NOTIFY_HOUR] = hour
@@ -95,5 +110,16 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setWidgetManualOrder(enabled: Boolean) {
         context.dataStore.edit { it[Keys.WIDGET_MANUAL_ORDER] = enabled }
+    }
+
+    /**
+     * 「〜時間前」通知を最後に確認した時刻(epoch millis)。設定値ではなく内部状態。
+     * 次回はこの時刻より後の発火分だけを通知し、二重送信と取りこぼしを防ぐ。未記録ならnull。
+     */
+    suspend fun toppingAlertLastCheck(): Long? =
+        context.dataStore.data.first()[Keys.TOPPING_ALERT_LAST_CHECK]
+
+    suspend fun setToppingAlertLastCheck(epochMillis: Long) {
+        context.dataStore.edit { it[Keys.TOPPING_ALERT_LAST_CHECK] = epochMillis }
     }
 }

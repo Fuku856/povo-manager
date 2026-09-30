@@ -13,6 +13,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.time.LocalDate
+import java.time.LocalTime
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -54,6 +55,10 @@ data class BackupPurchase(
     val purchaseDate: String,
     val toppingName: String,
     val validityEndDate: String? = null,
+    /** 購入時刻(ISO形式)。時刻機能より前の形式や時刻なしの購入は null */
+    val purchaseTime: String? = null,
+    /** 有効期限の満了時刻(ISO形式)。時間型トッピング以外は null */
+    val validityEndTime: String? = null,
 )
 
 @Singleton
@@ -138,6 +143,8 @@ class BackupManager @Inject constructor(
                 purchaseDate = it.purchaseDate.toString(),
                 toppingName = it.toppingName,
                 validityEndDate = it.validityEndDate?.toString(),
+                purchaseTime = it.purchaseTime?.toString(),
+                validityEndTime = it.validityEndTime?.toString(),
             )
         },
     )
@@ -159,6 +166,8 @@ class BackupManager @Inject constructor(
                 purchaseDate = LocalDate.parse(it.purchaseDate),
                 toppingName = it.toppingName,
                 validityEndDate = it.validityEndDate?.let(LocalDate::parse),
+                purchaseTime = it.purchaseTime?.let(LocalTime::parse),
+                validityEndTime = it.validityEndTime?.let(LocalTime::parse),
             )
         },
     )

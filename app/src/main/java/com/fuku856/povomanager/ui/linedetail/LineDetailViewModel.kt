@@ -9,6 +9,7 @@ import com.fuku856.povomanager.data.db.ToppingPurchase
 import com.fuku856.povomanager.data.settings.AppSettings
 import com.fuku856.povomanager.data.settings.SettingsRepository
 import com.fuku856.povomanager.domain.LineStatus
+import com.fuku856.povomanager.domain.ValidityEnd
 import com.fuku856.povomanager.domain.toStatus
 import com.fuku856.povomanager.ui.LineDetailRoute
 import com.fuku856.povomanager.ui.common.UndoController
@@ -18,7 +19,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.LocalDate
+import java.time.LocalDateTime
 import javax.inject.Inject
 
 data class LineDetailUiState(
@@ -42,28 +43,41 @@ class LineDetailViewModel @Inject constructor(
         combine(repository.observeLineWithPurchases(lineId), settingsRepository.settings) { line, settings ->
             LineDetailUiState(
                 loaded = true,
-                status = line?.toStatus(settings, LocalDate.now()),
+                status = line?.toStatus(settings, LocalDateTime.now()),
                 expiryPeriodDays = settings.expiryPeriodDays,
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LineDetailUiState())
 
-    fun recordPurchase(date: LocalDate, toppingName: String, validityEndDate: LocalDate?) {
+    fun recordPurchase(purchasedAt: LocalDateTime, toppingName: String, validityEnd: ValidityEnd?) {
         viewModelScope.launch {
             val purchase = ToppingPurchase(
                 lineId = lineId,
-                purchaseDate = date,
+                purchaseDate = purchasedAt.toLocalDate(),
+                purchaseTime = purchasedAt.toLocalTime(),
                 toppingName = toppingName,
-                validityEndDate = validityEndDate,
+                validityEndDate = validityEnd?.date,
+                validityEndTime = validityEnd?.time,
             )
             val added = purchase.copy(id = repository.addPurchase(purchase))
             undoController.show("購入を記録しました") { repository.deletePurchase(added) }
         }
     }
 
-    fun updatePurchase(original: ToppingPurchase, date: LocalDate, toppingName: String, validityEndDate: LocalDate?) {
+    fun updatePurchase(
+        original: ToppingPurchase,
+        purchasedAt: LocalDateTime,
+        toppingName: String,
+        validityEnd: ValidityEnd?,
+    ) {
         viewModelScope.launch {
             repository.updatePurchase(
-                original.copy(purchaseDate = date, toppingName = toppingName, validityEndDate = validityEndDate)
+                original.copy(
+                    purchaseDate = purchasedAt.toLocalDate(),
+                    purchaseTime = purchasedAt.toLocalTime(),
+                    toppingName = toppingName,
+                    validityEndDate = validityEnd?.date,
+                    validityEndTime = validityEnd?.time,
+                )
             )
         }
     }

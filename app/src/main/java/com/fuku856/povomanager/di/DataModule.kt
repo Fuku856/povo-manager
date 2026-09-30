@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.fuku856.povomanager.data.db.LineDao
 import com.fuku856.povomanager.data.db.MIGRATION_1_2
 import com.fuku856.povomanager.data.db.MIGRATION_2_3
+import com.fuku856.povomanager.data.db.MIGRATION_3_4
 import com.fuku856.povomanager.data.db.PovoDatabase
 import dagger.Module
 import dagger.Provides
@@ -21,7 +22,7 @@ object DataModule {
     @Singleton
     fun providePovoDatabase(@ApplicationContext context: Context): PovoDatabase =
         Room.databaseBuilder(context, PovoDatabase::class.java, "povo-manager.db")
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
             .build()
 
     @Provides

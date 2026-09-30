@@ -60,7 +60,9 @@ import com.fuku856.povomanager.ui.common.SimTypeChip
 import com.fuku856.povomanager.ui.common.SwipeDismissSnackbarHost
 import com.fuku856.povomanager.ui.common.displayName
 import com.fuku856.povomanager.ui.common.formatPhoneNumber
+import com.fuku856.povomanager.ui.common.purchaseDisplayString
 import com.fuku856.povomanager.ui.common.toDisplayString
+import com.fuku856.povomanager.ui.common.validityEndDisplayString
 import java.time.ZoneId
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -167,8 +169,8 @@ fun LineDetailScreen(
     if (showAddSheet) {
         PurchaseSheet(
             title = "トッピング購入を記録",
-            onConfirm = { date, name, validityEnd ->
-                viewModel.recordPurchase(date, name, validityEnd)
+            onConfirm = { purchasedAt, name, validityEnd ->
+                viewModel.recordPurchase(purchasedAt, name, validityEnd)
                 showAddSheet = false
             },
             onDismiss = { showAddSheet = false },
@@ -178,11 +180,9 @@ fun LineDetailScreen(
     editingPurchase?.let { purchase ->
         PurchaseSheet(
             title = "購入履歴を編集",
-            initialDate = purchase.purchaseDate,
-            initialName = purchase.toppingName,
-            initialValidityEnd = purchase.validityEndDate,
-            onConfirm = { date, name, validityEnd ->
-                viewModel.updatePurchase(purchase, date, name, validityEnd)
+            initial = purchase,
+            onConfirm = { purchasedAt, name, validityEnd ->
+                viewModel.updatePurchase(purchase, purchasedAt, name, validityEnd)
                 editingPurchase = null
             },
             onDismiss = { editingPurchase = null },
@@ -265,8 +265,8 @@ private fun PurchaseRow(
             Text(purchase.toppingName, style = MaterialTheme.typography.bodyLarge)
             Text(
                 buildString {
-                    append("購入: ${purchase.purchaseDate.toDisplayString()}")
-                    purchase.validityEndDate?.let { append("  有効期限: ${it.toDisplayString()}") }
+                    append("購入: ${purchase.purchaseDisplayString}")
+                    purchase.validityEndDisplayString?.let { append("  有効期限: $it") }
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
