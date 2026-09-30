@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ダークモード時は起動直後のスプラッシュ（windowBackground）も暗くする -->
+    <style name="Theme.PovoManager" parent="android:Theme.Material.NoActionBar" />
+</resources>
