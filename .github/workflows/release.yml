@@ -19,13 +19,30 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.release.tag_name }}
           REPO: ${{ github.repository }}
+          PUBLISHED_AT: ${{ github.event.release.published_at }}
+          PRERELEASE: ${{ github.event.release.prerelease }}
           # 要約生成に使用。Claude Pro/Max サブスクの OAuth トークン(API クレジット不要)。
           # 未設定でも従来の自動生成 changelog は出力される。
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: |
+          # 比較元(前回リリース)を明示する。省略すると GitHub が古いタグ(例: v1.7-beta.7)を
+          # 選び、前回リリース済みの PR まで変更点に混ざるため。
+          # プレリリースは直前のリリース(ベータ含む)、正式版は直前の正式版と比較する。
+          prev=$(gh release list --repo "$REPO" --exclude-drafts --limit 100 \
+            --json tagName,isPrerelease,publishedAt \
+            | jq -r --arg tag "$TAG" --arg at "$PUBLISHED_AT" --arg pre "$PRERELEASE" '
+                [.[] | select(.tagName != $tag and .publishedAt < $at
+                              and ($pre == "true" or .isPrerelease == false))]
+                | sort_by(.publishedAt) | last | .tagName // empty')
+          args=(-f tag_name="$TAG")
+          if [ -n "$prev" ]; then
+            args+=(-f previous_tag_name="$prev")
+          fi
+          echo "previous tag: ${prev:-(auto)}"
+
           # 本文の有無に関わらず、毎回自動生成した変更履歴で上書きする。
           notes=$(gh api -X POST "repos/$REPO/releases/generate-notes" \
-            -f tag_name="$TAG" --jq '.body // empty')
+            "${args[@]}" --jq '.body // empty')
           # API が空 body を返した場合(タグ間コミット 0 件など)はスキップ。
           # 空ファイルで gh release edit するとリリース本文が消えるため。
           [ -n "$notes" ] || { echo "generate-notes returned empty body; skipping."; exit 0; }
