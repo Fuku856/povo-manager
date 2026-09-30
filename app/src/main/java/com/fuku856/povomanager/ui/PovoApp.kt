@@ -7,8 +7,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection
 import androidx.compose.animation.core.tween
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.navigation.compose.NavHost
@@ -16,6 +18,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.fuku856.povomanager.ui.archived.ArchivedLinesScreen
+import com.fuku856.povomanager.ui.common.UndoController
+import com.fuku856.povomanager.ui.common.UndoSnackbarEffect
 import com.fuku856.povomanager.ui.home.HomeScreen
 import com.fuku856.povomanager.ui.lineedit.LineEditScreen
 import com.fuku856.povomanager.ui.linedetail.LineDetailScreen
@@ -39,10 +43,19 @@ data class LineEditRoute(val lineId: Long = -1L)
 data object SettingsRoute
 
 @Composable
-fun PovoApp(deepLinkLineId: Long? = null, onDeepLinkConsumed: () -> Unit = {}) {
+fun PovoApp(
+    undoController: UndoController,
+    deepLinkLineId: Long? = null,
+    onDeepLinkConsumed: () -> Unit = {},
+) {
     val navController = rememberNavController()
 
     NotificationPermissionEffect()
+
+    // 取り消しトーストはアプリ全体で1つのホストに出す。表示は NavHost の外で管理するため、
+    // 操作した画面から戻ってもトーストが消えない。各画面は Scaffold の snackbarHost にこれを渡す。
+    val undoSnackbarHostState = remember { SnackbarHostState() }
+    UndoSnackbarEffect(undoController, undoSnackbarHostState)
 
     // 通知/ウィジェットから渡された回線IDで詳細へ遷移する。消費後にnullへ戻すことで、
     // 同じ回線を続けてタップしても再遷移できるようにする。
@@ -75,12 +88,14 @@ fun PovoApp(deepLinkLineId: Long? = null, onDeepLinkConsumed: () -> Unit = {}) {
                 onAddLine = { navController.navigate(LineEditRoute()) },
                 onSettings = { navController.navigate(SettingsRoute) },
                 onShowArchived = { navController.navigate(ArchivedRoute) },
+                snackbarHostState = undoSnackbarHostState,
             )
         }
         composable<ArchivedRoute> {
             ArchivedLinesScreen(
                 onBack = { navController.popBackStack() },
                 onLineClick = { navController.navigate(LineDetailRoute(it)) },
+                snackbarHostState = undoSnackbarHostState,
             )
         }
         composable<LineDetailRoute> { backStackEntry ->
@@ -89,6 +104,7 @@ fun PovoApp(deepLinkLineId: Long? = null, onDeepLinkConsumed: () -> Unit = {}) {
                 lineId = route.lineId,
                 onEdit = { navController.navigate(LineEditRoute(route.lineId)) },
                 onBack = { navController.popBackStack() },
+                snackbarHostState = undoSnackbarHostState,
             )
         }
         composable<LineEditRoute> { backStackEntry ->

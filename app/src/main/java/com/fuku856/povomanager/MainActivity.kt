@@ -10,11 +10,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.fuku856.povomanager.notifications.NotificationHelper
 import com.fuku856.povomanager.ui.PovoApp
+import com.fuku856.povomanager.ui.common.UndoController
 import com.fuku856.povomanager.ui.theme.PovoManagerTheme
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @Inject lateinit var undoController: UndoController
+
     // 通知・ウィジェットのタップで開く回線ID。singleTop のため、起動中に届く新しい
     // Intent は onNewIntent で受け取り、状態更新で詳細画面へ遷移させる。
     private var deepLinkLineId by mutableStateOf<Long?>(null)
@@ -26,6 +30,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             PovoManagerTheme {
                 PovoApp(
+                    undoController = undoController,
                     deepLinkLineId = deepLinkLineId,
                     onDeepLinkConsumed = { deepLinkLineId = null },
                 )

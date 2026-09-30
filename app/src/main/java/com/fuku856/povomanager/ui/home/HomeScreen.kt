@@ -32,11 +32,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -56,7 +54,6 @@ import com.fuku856.povomanager.ui.common.LineHeader
 import com.fuku856.povomanager.ui.common.RemainingDaysBadge
 import com.fuku856.povomanager.ui.common.SwipeDismissSnackbarHost
 import com.fuku856.povomanager.ui.common.SwipeToArchiveBox
-import com.fuku856.povomanager.ui.common.showUndoSnackbar
 import com.fuku856.povomanager.ui.common.toDisplayString
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
@@ -68,35 +65,11 @@ fun HomeScreen(
     onAddLine: () -> Unit,
     onSettings: () -> Unit,
     onShowArchived: () -> Unit,
+    snackbarHostState: SnackbarHostState,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
     var purchaseTargetLineId by remember { mutableStateOf<Long?>(null) }
-
-    LaunchedEffect(Unit) {
-        viewModel.purchaseAdded.collect { purchase ->
-            val result = snackbarHostState.showUndoSnackbar(
-                message = "購入を記録しました",
-                actionLabel = "取り消す",
-            )
-            if (result == SnackbarResult.ActionPerformed) {
-                viewModel.undoPurchase(purchase)
-            }
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        viewModel.archivedEvent.collect { lineId ->
-            val result = snackbarHostState.showUndoSnackbar(
-                message = "アーカイブしました",
-                actionLabel = "取り消す",
-            )
-            if (result == SnackbarResult.ActionPerformed) {
-                viewModel.unarchive(lineId)
-            }
-        }
-    }
 
     Scaffold(
         topBar = {
