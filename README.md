@@ -85,7 +85,3 @@ GitHub Actions により、GitHub リリースを公開すると署名済み APK
 ## ライセンス
 
 [MIT](LICENSE)
-
-## クレジット
-
-- Claude Fable 5で実装。停止後はOpus 4.8
