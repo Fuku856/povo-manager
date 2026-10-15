@@ -324,17 +324,6 @@ p { margin: 0; }
 .notify .head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px clamp(32px, 6vw, 96px); align-items: end; }
 @media (max-width: 860px) { .notify .head { grid-template-columns: 1fr; } }
 .notify .head p { max-width: 30em; }
-.toast {
-  margin-top: clamp(40px, 6vw, 72px);
-  max-width: 560px;
-  background: var(--ground); border-radius: 24px; padding: 18px 22px;
-  display: grid; grid-template-columns: 36px 1fr; gap: 2px 14px;
-  font-family: var(--font-text); letter-spacing: 0;
-}
-.toast img { width: 36px; height: 36px; grid-row: 1 / span 3; }
-.toast .app { font-size: 13px; color: var(--ink-2); line-height: 1.5; }
-.toast b { font-size: 16px; line-height: 1.5; }
-.toast span { font-size: 15px; line-height: 1.6; color: var(--ink-2); }
 
 .when {
   list-style: none; padding: 0; margin: clamp(28px, 4vw, 44px) 0 0;
@@ -346,18 +335,6 @@ p { margin: 0; }
 }
 .notify .more { margin-top: clamp(40px, 5vw, 64px); display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 28px clamp(32px, 5vw, 72px); }
 .notify .more p { font-size: 16px; }
-
-/* widget fallback */
-.widget {
-  max-width: 380px; border-radius: 28px; padding: 24px 26px;
-  background: #fcfcff; color: #191c1e;
-}
-.w-main { display: grid; gap: 2px; }
-.w-main span { font-size: 15px; font-weight: 700; color: #41484d; }
-.w-main b { font-family: var(--font-display); font-weight: 800; font-size: 52px; line-height: 1.1; letter-spacing: -0.02em; color: #ba1a1a; }
-.widget ul { list-style: none; padding: 16px 0 0; margin: 18px 0 0; display: grid; gap: 8px; background: none; }
-.widget li { display: flex; justify-content: space-between; font-size: 15px; font-weight: 700; line-height: 1.5; padding: 8px 12px; border-radius: 12px; background: #eef1f4; }
-.widget li b { font-variant-numeric: tabular-nums; }
 
 /* ---------- toppings ---------- */
 table.presets { margin-top: 28px; border-collapse: collapse; width: 100%; max-width: 520px; font-size: 15px; }
@@ -371,6 +348,12 @@ table.presets { margin-top: 28px; border-collapse: collapse; width: 100%; max-wi
 .extras dl { margin: 40px 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 36px clamp(32px, 5vw, 72px); }
 .extras dt { font-family: var(--font-display); font-weight: 800; font-size: 19px; line-height: 1.5; letter-spacing: 0; }
 .extras dd { margin: 8px 0 0; font-size: 16px; }
+
+.pair {
+  margin-top: clamp(48px, 6vw, 80px);
+  display: grid; grid-template-columns: repeat(2, minmax(0, 300px)); gap: clamp(16px, 4vw, 48px); align-items: start;
+}
+.pair:not(:has(> :not([hidden]))) { display: none; }
 
 /* ---------- install ---------- */
 .install {
@@ -484,7 +467,7 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
   <div class="row">
     <div class="shot-col rv">
       <figure class="phone" data-shot>
-        <img src="img/home.png" alt="povo Manager のホーム画面。回線ごとのカードに残り日数のバッジと進捗バーが並んでいる" width="1080" height="2400" decoding="async" onerror="this.parentNode.hidden=true" onload="var f=this.parentNode.parentNode.querySelector('[data-fallback]');if(f)f.hidden=true">
+        <img src="img/home.png" alt="povo Manager のホーム画面。回線ごとのカードに残り日数のバッジと進捗バーが並んでいる" width="720" height="1600" decoding="async" onerror="this.parentNode.hidden=true" onload="var f=this.parentNode.parentNode.querySelector('[data-fallback]');if(f)f.hidden=true">
       </figure>
       <div class="lines" data-ui data-fallback aria-label="ホーム画面の例">
         <div class="line" style="--c:var(--safe-fg)"><b>メイン</b><span class="badge b-safe">あと160日</span><span class="tel">090-0000-0001</span><div class="track"><i style="--p:89%"></i></div></div>
@@ -513,12 +496,6 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
       <p class="rv" style="--d:70ms">初期設定では、自動解約日の30日前、14日前、7日前、3日前、前日、当日に通知します。期限を過ぎても回線を消すまでは毎日知らせます。通知する時刻は0時から23時のあいだで選べます。</p>
     </div>
 
-    <div class="toast rv" data-ui aria-label="通知の例">
-      <img src="icon.svg" alt="" width="36" height="36">
-      <span class="app">povo Manager</span>
-      <b>【povo】解約まであと7日: サブ</b>
-      <span><span id="toast-date">2026/11/09</span>までにトッピングの購入が必要です。</span>
-    </div>
 
     <ol class="when rv" aria-label="初期設定で通知する日">
       <li class="b-warn">30日前</li>
@@ -538,8 +515,8 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
         <h3>トッピングの期限も</h3>
         <p>データ追加などのトッピングにも有効期限があります。こちらは初期設定で3日前と前日に知らせます。</p>
       </div>
-      <figure class="phone" data-shot style="margin:0">
-        <img src="img/notification.png" alt="通知シェードに povo Manager の通知が出ている画面" width="1080" height="2400" decoding="async" onerror="this.parentNode.hidden=true" onload="var f=this.parentNode.parentNode.querySelector('[data-fallback]');if(f)f.hidden=true">
+      <figure class="phone wide" data-shot style="margin:0">
+        <img src="img/notification.png" alt="通知シェードに povo Manager の通知が出ている画面" width="720" height="720" decoding="async" onerror="this.parentNode.hidden=true" onload="var f=this.parentNode.parentNode.querySelector('[data-fallback]');if(f)f.hidden=true">
       </figure>
     </div>
   </div>
@@ -549,20 +526,12 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
   <div class="row flip">
     <div class="shot-col rv">
       <figure class="phone wide" data-shot>
-        <img src="img/widget.png" alt="スマートフォンのホーム画面に置いた povo Manager のウィジェット" width="1080" height="2400" decoding="async" onerror="this.parentNode.hidden=true" onload="var f=this.parentNode.parentNode.querySelector('[data-fallback]');if(f)f.hidden=true">
+        <img src="img/widget.png" alt="スマートフォンのホーム画面に置いた povo Manager のウィジェット" width="720" height="880" decoding="async" onerror="this.parentNode.hidden=true" onload="var f=this.parentNode.parentNode.querySelector('[data-fallback]');if(f)f.hidden=true">
       </figure>
-      <div class="widget" data-ui data-fallback aria-label="ウィジェットの例">
-        <p class="w-main"><span>データ専用</span><b>あと5日</b></p>
-        <ul>
-          <li><span>サブ</span><b>25日</b></li>
-          <li><span>仕事用</span><b>61日</b></li>
-          <li><span>メイン</span><b>160日</b></li>
-        </ul>
-      </div>
     </div>
     <div class="copy">
       <h2 id="widget-h" class="rv">アプリを<wbr>開かずに<wbr>確かめる</h2>
-      <p class="rv" style="--d:70ms">ホーム画面のウィジェットに、期限がいちばん近い回線を大きく、ほかの回線を最大4つまで小さく出します。残り7日以内の回線は赤い文字になります。ウィジェットに出す回線と順番は設定で選べます。</p>
+      <p class="rv" style="--d:70ms">ホーム画面のウィジェットに、全部の回線の残り日数をアプリと同じ色で並べます。並び順は期限の近い順で、設定で手動にもできます。ウィジェットを大きくすると並ぶ回線が増え、入りきらない分はスクロールで見られます。</p>
     </div>
   </div>
 </section>
@@ -571,7 +540,7 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
   <div class="row">
     <div class="shot-col rv">
       <figure class="phone" data-shot>
-        <img src="img/purchase.png" alt="トッピングの購入を記録するシート。トッピングの一覧から選べる" width="1080" height="2400" decoding="async" onerror="this.parentNode.hidden=true" onload="var f=this.parentNode.parentNode.querySelector('[data-fallback]');if(f)f.hidden=true">
+        <img src="img/purchase.png" alt="トッピングの購入を記録するシート。トッピングの一覧から選べる" width="720" height="1600" decoding="async" onerror="this.parentNode.hidden=true" onload="var f=this.parentNode.parentNode.querySelector('[data-fallback]');if(f)f.hidden=true">
       </figure>
     </div>
     <div class="copy split">
@@ -602,9 +571,9 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
     <div class="rv" style="--d:140ms"><dt>解約した回線をしまう</dt><dd>もう使わない回線はアーカイブに移せます。一覧からは消えて、記録は残ります。</dd></div>
     <div class="rv" style="--d:210ms"><dt>180日を変える</dt><dd>povo の規約が変わったときのために、解約までの日数を1日から3650日のあいだで変えられます。</dd></div>
   </dl>
-  <div class="row" style="margin-top:clamp(48px,6vw,80px)">
-    <figure class="phone" data-shot><img src="img/detail.png" alt="回線の詳細画面。自動解約日とトッピングの購入履歴が並んでいる" width="1080" height="2400" decoding="async" onerror="this.parentNode.hidden=true" onload="var f=this.parentNode.parentNode.querySelector('[data-fallback]');if(f)f.hidden=true"></figure>
-    <figure class="phone" data-shot><img src="img/settings.png" alt="設定画面。通知のタイミングと通知時刻を選ぶ項目がある" width="1080" height="2400" decoding="async" onerror="this.parentNode.hidden=true" onload="var f=this.parentNode.parentNode.querySelector('[data-fallback]');if(f)f.hidden=true"></figure>
+  <div class="pair">
+    <figure class="phone" data-shot><img src="img/detail.png" alt="回線の詳細画面。自動解約日とトッピングの購入履歴が並んでいる" width="720" height="933" decoding="async" onerror="this.parentNode.hidden=true" onload="var f=this.parentNode.parentNode.querySelector('[data-fallback]');if(f)f.hidden=true"></figure>
+    <figure class="phone" data-shot><img src="img/settings.png" alt="設定画面。通知のタイミングと通知時刻を選ぶ項目がある" width="720" height="1600" decoding="async" onerror="this.parentNode.hidden=true" onload="var f=this.parentNode.parentNode.querySelector('[data-fallback]');if(f)f.hidden=true"></figure>
   </div>
 </section>
 
@@ -718,8 +687,6 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
   var start = today(); start.setDate(start.getDate() - 155);
   input.value = iso(start);
   input.addEventListener("input", render);
-  var t7 = today(); t7.setDate(t7.getDate() + 7);
-  document.getElementById("toast-date").textContent = iso(t7).replace(/-/g, "/");
   render();
 
   // --- ダウンロード: 最新リリースの APK に直リンクする（失敗したら Releases ページのまま） ---
