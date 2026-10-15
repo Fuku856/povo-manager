@@ -13,6 +13,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.time.LocalDate
+import java.time.LocalTime
 
 /** [LineDao] のインポート・アーカイブ更新の検証(Robolectric + インメモリ Room)。 */
 @RunWith(AndroidJUnit4::class)
@@ -63,6 +65,36 @@ class LineDaoTest {
         )
 
         assertFalse(dao.getLine(id)!!.isArchived)
+    }
+
+    @Test
+    fun mergeImport_treatsPurchasesAtDifferentTimesAsDistinct() = runBlocking {
+        val id = dao.insertLine(PovoLine(phoneNumber = "09012345678"))
+        val date = LocalDate.of(2026, 9, 30)
+        // 日数型は満了時刻を持たないため、同じ日に2回買うと購入時刻だけが異なる
+        val existing = ToppingPurchase(
+            lineId = id,
+            purchaseDate = date,
+            purchaseTime = LocalTime.of(9, 0),
+            toppingName = "データ追加1GB(7日間)",
+            validityEndDate = date.plusDays(7),
+        )
+        dao.insertPurchase(existing)
+
+        // 時刻が同じものは重複として追加せず、違うものは別の購入として追加する
+        val sameTime = existing.copy(lineId = 0)
+        val otherTime = existing.copy(lineId = 0, purchaseTime = LocalTime.of(21, 0))
+        dao.mergeImport(
+            lines = listOf(PovoLine(phoneNumber = "09012345678")),
+            purchasesByLineIndex = mapOf(0 to listOf(sameTime, otherTime)),
+        )
+
+        val purchases = dao.getPurchasesForLine(id)
+        assertEquals(
+            setOf(LocalTime.of(9, 0), LocalTime.of(21, 0)),
+            purchases.map { it.purchaseTime }.toSet(),
+        )
+        assertEquals(2, purchases.size)
     }
 
     @Test

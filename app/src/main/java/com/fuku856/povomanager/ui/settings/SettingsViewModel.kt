@@ -22,7 +22,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.LocalDate
+import java.time.LocalDateTime
 import javax.inject.Inject
 
 /** インポート確定前のプレビュー状態(選択済みのモードと取り込まれる回線一覧) */
@@ -118,6 +118,13 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun toggleToppingNotifyHour(hour: Int) {
+        viewModelScope.launch {
+            val current = settingsRepository.current().toppingExpiryNotifyHours
+            settingsRepository.setToppingExpiryNotifyHours(if (hour in current) current - hour else current + hour)
+        }
+    }
+
     fun setNotifyTime(hour: Int, minute: Int) {
         viewModelScope.launch {
             settingsRepository.setNotifyTime(hour, minute)
@@ -139,7 +146,7 @@ class SettingsViewModel @Inject constructor(
                 val lines = lineRepository.getActiveLinesWithPurchases()
                 if (lines.size > 1 && lines.map { it.line.sortOrder }.distinct().size <= 1) {
                     val orderedIds = lines
-                        .toStatusesByExpiry(settingsRepository.current(), LocalDate.now())
+                        .toStatusesByExpiry(settingsRepository.current(), LocalDateTime.now())
                         .map { it.line.id }
                     lineRepository.setLineOrder(orderedIds)
                 }

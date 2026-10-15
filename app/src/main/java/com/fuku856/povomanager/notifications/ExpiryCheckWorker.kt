@@ -12,7 +12,7 @@ import com.fuku856.povomanager.domain.toppingsToNotify
 import com.fuku856.povomanager.widget.WidgetUpdater
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import java.time.LocalDate
+import java.time.LocalDateTime
 
 /** 毎日1回、全回線の期限をチェックして通知を発行する */
 @HiltWorker
@@ -27,16 +27,16 @@ class ExpiryCheckWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         val settings = settingsRepository.current()
-        val today = LocalDate.now()
+        val now = LocalDateTime.now()
         // アーカイブ済み回線は通知対象外(期限切れの毎日通知を止めるのが本機能の目的)
         repository.getActiveLinesWithPurchases().forEach { lineWithPurchases ->
-            val status = lineWithPurchases.toStatus(settings, today)
+            val status = lineWithPurchases.toStatus(settings, now)
             if (shouldNotifyExpiry(status, settings)) {
                 notificationHelper.notifyExpiry(status)
             }
             notificationHelper.notifyToppings(
                 line = lineWithPurchases.line,
-                toppings = toppingsToNotify(lineWithPurchases.purchases, settings, today),
+                toppings = toppingsToNotify(lineWithPurchases.purchases, settings, now),
             )
         }
         // 日付の進行をウィジェットに反映

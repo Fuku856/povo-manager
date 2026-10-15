@@ -3,6 +3,7 @@ package com.fuku856.povomanager.data.db
 import androidx.room.TypeConverter
 import com.fuku856.povomanager.domain.SimType
 import java.time.LocalDate
+import java.time.LocalTime
 
 class Converters {
     @TypeConverter
@@ -10,6 +11,13 @@ class Converters {
 
     @TypeConverter
     fun epochDayToLocalDate(epochDay: Long?): LocalDate? = epochDay?.let(LocalDate::ofEpochDay)
+
+    /** 時刻は0時からの経過秒で保存 */
+    @TypeConverter
+    fun localTimeToSecondOfDay(time: LocalTime?): Int? = time?.toSecondOfDay()
+
+    @TypeConverter
+    fun secondOfDayToLocalTime(seconds: Int?): LocalTime? = seconds?.let { LocalTime.ofSecondOfDay(it.toLong()) }
 
     /** Set<Int> はカンマ区切り文字列で保存。null(=共通設定)と空集合(=通知なし)を区別する */
     @TypeConverter

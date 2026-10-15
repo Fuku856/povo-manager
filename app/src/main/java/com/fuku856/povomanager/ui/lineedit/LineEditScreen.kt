@@ -11,32 +11,26 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,9 +45,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.fuku856.povomanager.domain.SimType
 import com.fuku856.povomanager.ui.common.PhoneNumberVisualTransformation
-import com.fuku856.povomanager.ui.common.toDisplayString
-import java.time.Instant
-import java.time.ZoneOffset
+import com.fuku856.povomanager.ui.common.PurchaseDateTimeField
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -64,7 +56,6 @@ fun LineEditScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showDeleteDialog by rememberSaveable { mutableStateOf(false) }
-    var showDatePicker by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -152,14 +143,16 @@ fun LineEditScreen(
                         checked = state.recordInitialPurchase,
                         onCheckedChange = viewModel::onRecordInitialPurchaseChange,
                     )
-                    Text("最終トッピング購入日を記録する", style = MaterialTheme.typography.bodyMedium)
+                    Text("最終トッピング購入日時を記録する", style = MaterialTheme.typography.bodyMedium)
                 }
                 if (state.recordInitialPurchase) {
-                    OutlinedButton(onClick = { showDatePicker = true }) {
-                        Icon(Icons.Default.CalendarMonth, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(state.initialPurchaseDate.toDisplayString())
-                    }
+                    PurchaseDateTimeField(
+                        date = state.initialPurchaseDate,
+                        time = state.initialPurchaseTime,
+                        onDateChange = viewModel::onInitialPurchaseDateChange,
+                        onTimeChange = viewModel::onInitialPurchaseTimeChange,
+                        isError = state.initialPurchaseTimeError,
+                    )
                 }
             }
 
@@ -202,31 +195,6 @@ fun LineEditScreen(
         }
     }
 
-    if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = state.initialPurchaseDate
-                .atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli(),
-        )
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    datePickerState.selectedDateMillis?.let { millis ->
-                        viewModel.onInitialPurchaseDateChange(
-                            Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()
-                        )
-                    }
-                    showDatePicker = false
-                }) { Text("OK") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("キャンセル") }
-            },
-        ) {
-            DatePicker(state = datePickerState)
-        }
-    }
-
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -251,13 +219,14 @@ fun NotifyDayChips(
     selected: Set<Int>,
     onToggle: (Int) -> Unit,
     choices: List<Int> = com.fuku856.povomanager.data.settings.AppSettings.NOTIFY_DAY_CHOICES,
+    label: (Int) -> String = { day -> if (day == 0) "当日" else "${day}日前" },
 ) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        choices.forEach { day ->
+        choices.forEach { value ->
             FilterChip(
-                selected = day in selected,
-                onClick = { onToggle(day) },
-                label = { Text(if (day == 0) "当日" else "${day}日前") },
+                selected = value in selected,
+                onClick = { onToggle(value) },
+                label = { Text(label(value)) },
             )
         }
     }

@@ -101,7 +101,7 @@ interface LineDao {
     /**
      * インポート時のマージ(上書き)。既存データは削除しない。
      * 電話番号が一致する回線は情報を更新し、一致しない回線は新規追加する。
-     * 購入履歴は (購入日, トッピング名, 有効期限) が完全一致するものは重複追加しない。
+     * 購入履歴は (購入日時, トッピング名, 有効期限日時) が完全一致するものは重複追加しない。
      * [keepArchivedIndices] に含まれる回線は、既存回線のアーカイブ状態を維持する。
      */
     @Transaction
@@ -131,8 +131,10 @@ interface LineDao {
                 .filterNot { p ->
                     existingPurchases.any {
                         it.purchaseDate == p.purchaseDate &&
+                            it.purchaseTime == p.purchaseTime &&
                             it.toppingName == p.toppingName &&
-                            it.validityEndDate == p.validityEndDate
+                            it.validityEndDate == p.validityEndDate &&
+                            it.validityEndTime == p.validityEndTime
                     }
                 }
                 .map { it.copy(id = 0, lineId = targetId) }
