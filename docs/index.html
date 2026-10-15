@@ -1,0 +1,762 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>povo Manager｜povoの自動解約日（180日）を管理して通知するAndroidアプリ</title>
+<meta name="description" content="povo 2.0 の最後のトッピング購入日から180日後の自動解約日を回線ごとに計算して、期限が近づいたら通知するAndroidアプリです。複数回線の残り日数を一覧とウィジェットで確認できます。無料、オープンソース。">
+<link rel="canonical" href="https://fuku856.github.io/povo-manager/">
+<meta name="theme-color" content="#1A1C1E">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+
+<meta property="og:type" content="website">
+<meta property="og:locale" content="ja_JP">
+<meta property="og:site_name" content="povo Manager">
+<meta property="og:title" content="povo Manager｜povoの自動解約日を数えるAndroidアプリ">
+<meta property="og:description" content="最後にトッピングを買った日から180日。回線ごとに残り日数を出して、期限が近づいたら通知します。">
+<meta property="og:url" content="https://fuku856.github.io/povo-manager/">
+<meta property="og:image" content="https://fuku856.github.io/povo-manager/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=LINE+Seed+JP:wght@700;800&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/yakuhanjp@4.1.1/dist/cdn/yakuhanjp.css">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "povo Manager",
+  "operatingSystem": "Android 8.0+",
+  "applicationCategory": "UtilitiesApplication",
+  "description": "povo 2.0 の自動解約日（最後のトッピング購入日から180日後）を複数回線まとめて管理し、期限前に通知するAndroidアプリ。",
+  "url": "https://fuku856.github.io/povo-manager/",
+  "downloadUrl": "https://github.com/Fuku856/povo-manager/releases/latest",
+  "license": "https://opensource.org/licenses/MIT",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "JPY" },
+  "author": { "@type": "Person", "name": "Fuku856", "url": "https://github.com/Fuku856" }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "povoの180日ルールとは？",
+      "acceptedAnswer": { "@type": "Answer", "text": "povo 2.0 では、180日間有料トッピングを購入せず、同じ期間の通話やSMSなどの従量料金の合計が660円を超えない場合、利用停止や契約解除になることがあるとされています。正確な条件はpovoの公式サイトで確認してください。" }
+    },
+    {
+      "@type": "Question",
+      "name": "通話料が660円を超えている月もありますが、日付は合っていますか？",
+      "acceptedAnswer": { "@type": "Answer", "text": "povo Manager はトッピングを買った日だけで数えていて、通話やSMSの料金は見ていません。そのため表示される自動解約日は、実際より早いことはあっても遅いことはありません。" }
+    },
+    {
+      "@type": "Question",
+      "name": "電話番号などのデータはどこに保存されますか？",
+      "acceptedAnswer": { "@type": "Answer", "text": "スマートフォンの中だけです。povo Manager はインターネット接続の権限を持っていないので、登録した電話番号やメモが外部に送られることはありません。機種変更のときはJSONファイルに書き出して移せます。" }
+    },
+    {
+      "@type": "Question",
+      "name": "iPhone版はありますか？",
+      "acceptedAnswer": { "@type": "Answer", "text": "ありません。Android 8.0 以降のスマートフォンで使えます。" }
+    },
+    {
+      "@type": "Question",
+      "name": "povoの公式アプリですか？",
+      "acceptedAnswer": { "@type": "Answer", "text": "違います。個人が作っている非公式のアプリで、povoやKDDIとは関係ありません。" }
+    }
+  ]
+}
+</script>
+
+<style>
+:root {
+  --ground: #f3f5f6;
+  --surface: #e6eaec;
+  --ink: #1a1c1e;
+  --ink-2: #4c5359;
+  --accent: #00658e;
+  --on-accent: #ffffff;
+  --field: #1a1c1e;
+  --field-ink: #e8eaec;
+  --field-ink-2: #a9b1b8;
+  --sim: #4fc3f7;
+
+  --safe-bg: #d7f2dc;  --safe-fg: #1b5e2a;
+  --warn-bg: #fbefc9;  --warn-fg: #6d5605;
+  --alert-bg: #fce3c8; --alert-fg: #8a4b00;
+  --danger-bg: #ffdad6; --danger-fg: #8c1d18;
+
+  --font-display: "YakuHanJP", "LINE Seed JP", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", Meiryo, sans-serif;
+  --font-text: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "BIZ UDPGothic", Meiryo, sans-serif;
+
+  --gutter: clamp(16px, 4vw, 40px);
+  --max: 1200px;
+  --section: clamp(88px, 12vw, 176px);
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ground: #121416;
+    --surface: #1e2225;
+    --ink: #e4e7ea;
+    --ink-2: #a3abb2;
+    --accent: #85cfff;
+    --on-accent: #00344c;
+    --field: #1a1c1e;
+    --safe-bg: #1b3a22;  --safe-fg: #8bd99b;
+    --warn-bg: #453a14;  --warn-fg: #f0ce63;
+    --alert-bg: #4a3115; --alert-fg: #f2b26b;
+    --danger-bg: #93000a; --danger-fg: #ffdad6;
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-text);
+  font-size: 17px;
+  line-height: 1.85;
+  letter-spacing: 0.03em;
+  line-break: strict;
+  overflow-wrap: anywhere;
+}
+img { display: block; max-width: 100%; height: auto; }
+a { color: inherit; }
+:focus-visible { outline: 3px solid var(--sim); outline-offset: 3px; }
+::selection { background: var(--sim); color: #1a1c1e; }
+
+h1, h2, h3, .num {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  font-feature-settings: "palt" 1;
+  word-break: auto-phrase;
+  text-wrap: balance;
+  margin: 0;
+}
+@supports not (word-break: auto-phrase) {
+  h1, h2, h3 { word-break: keep-all; }
+}
+h1 { font-size: clamp(34px, 4vw, 56px); }
+h2 { font-size: clamp(27px, 3.4vw, 42px); }
+h3 { font-size: 20px; line-height: 1.5; letter-spacing: 0; }
+p { margin: 0; }
+.wrap { max-width: var(--max); margin: 0 auto; padding: 0 var(--gutter); }
+.small { font-size: 14px; line-height: 1.7; color: var(--ink-2); }
+
+/* ---------- bar ---------- */
+.bar {
+  background: var(--field);
+  color: var(--field-ink);
+}
+.bar .wrap {
+  display: flex; align-items: center; gap: 28px;
+  min-height: 64px;
+}
+.mark {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--font-display); font-weight: 800; font-size: 18px;
+  text-decoration: none; letter-spacing: 0;
+  margin-right: auto;
+}
+.mark img { width: 30px; height: 30px; }
+.bar nav { display: flex; gap: 24px; font-size: 15px; }
+.bar nav a { text-decoration: none; color: var(--field-ink-2); }
+.bar nav a:hover { color: var(--field-ink); }
+@media (max-width: 960px) { .bar nav { display: none; } }
+.mark, .bar nav a, .btn { white-space: nowrap; }
+
+/* ---------- buttons ---------- */
+.btn {
+  display: inline-flex; align-items: center; gap: 10px;
+  min-height: 52px; padding: 0 26px;
+  border-radius: 999px;
+  background: var(--sim); color: #0d2733;
+  font-family: var(--font-display); font-weight: 800; font-size: 17px; letter-spacing: 0;
+  text-decoration: none;
+  transition: transform .15s ease, background-color .15s ease;
+}
+.btn:hover { background: #7fd4fa; }
+.btn:active { transform: scale(.97); }
+.btn svg { width: 22px; height: 22px; flex: none; }
+.btn.sm { min-height: 40px; padding: 0 18px; font-size: 15px; }
+.btn.ink { background: var(--accent); color: var(--on-accent); }
+.btn.ink:hover { background: var(--ink); color: var(--ground); }
+
+/* ---------- hero ---------- */
+.hero {
+  background: var(--field);
+  color: var(--field-ink);
+  padding: clamp(40px, 7vw, 104px) 0 clamp(56px, 9vw, 128px);
+}
+.hero .wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: clamp(40px, 6vw, 96px);
+  align-items: center;
+}
+@media (max-width: 860px) { .hero .wrap { grid-template-columns: 1fr; } }
+.hero h1 { color: #fff; max-width: 11em; }
+.lede {
+  margin-top: 28px; max-width: 30em;
+  font-size: clamp(17px, 1.6vw, 20px); color: var(--field-ink);
+}
+.cta { margin-top: 36px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 22px; }
+.ver { font-size: 14px; color: var(--field-ink-2); line-height: 1.6; }
+
+/* the calculator: a copy of the app's line card */
+.calc {
+  --bg: var(--safe-bg); --fg: var(--safe-fg);
+  background: var(--bg); color: var(--fg);
+  border-radius: 28px;
+  padding: clamp(24px, 3.4vw, 40px);
+  transition: background-color .3s ease, color .3s ease;
+}
+.calc[data-band="warn"]   { --bg: var(--warn-bg);   --fg: var(--warn-fg); }
+.calc[data-band="alert"]  { --bg: var(--alert-bg);  --fg: var(--alert-fg); }
+.calc[data-band="danger"] { --bg: var(--danger-bg); --fg: var(--danger-fg); }
+.calc label { display: block; font-size: 15px; font-weight: 700; }
+.calc input {
+  margin-top: 8px;
+  font: inherit; font-size: 20px; font-weight: 700; color: var(--ink);
+  background: var(--ground); border: 0; border-radius: 14px;
+  padding: 10px 14px; min-height: 52px; width: min(100%, 260px);
+}
+.days {
+  display: flex; align-items: baseline; gap: .12em;
+  margin-top: clamp(16px, 2.4vw, 28px);
+  font-family: var(--font-display); font-weight: 800; letter-spacing: -0.02em;
+  font-size: clamp(30px, 3.4vw, 40px); line-height: 1;
+}
+.days .num {
+  font-size: clamp(96px, 13vw, 168px); line-height: .9; letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.track {
+  margin-top: 22px; height: 12px; border-radius: 6px;
+  background: color-mix(in srgb, var(--fg) 16%, transparent);
+  overflow: hidden;
+}
+.track i {
+  display: block; height: 100%; width: var(--p, 14%);
+  background: var(--fg); border-radius: 6px;
+  transition: width .5s cubic-bezier(.2,.7,.2,1);
+}
+.exp { margin-top: 18px; font-size: 18px; font-weight: 700; line-height: 1.6; }
+.calc .note { margin-top: 6px; font-size: 15px; line-height: 1.7; }
+
+/* ---------- statement ---------- */
+.why { padding-top: var(--section); }
+.why p {
+  max-width: 34em;
+  font-size: clamp(20px, 2.1vw, 26px); line-height: 1.85; letter-spacing: .02em;
+}
+.why p + p { margin-top: 1.2em; font-size: 17px; color: var(--ink-2); max-width: 40em; }
+
+/* ---------- feature rows ---------- */
+.feature { padding-top: var(--section); }
+.row {
+  display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: clamp(32px, 6vw, 96px); align-items: center;
+}
+.row.flip { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
+.row.flip .shot-col { order: 2; }
+@media (max-width: 860px) {
+  .row, .row.flip { grid-template-columns: 1fr; }
+  .row.flip .shot-col { order: 0; }
+}
+.copy h2 { max-width: 12em; }
+@media (min-width: 861px) {
+  .row:has(> .shot-col:not(:has(> :not([hidden])))) .copy.split {
+    display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); column-gap: clamp(32px, 6vw, 96px); align-items: start;
+  }
+  .row:has(> .shot-col:not(:has(> :not([hidden])))) .copy.split > table { grid-column: 2; grid-row: 1 / span 3; margin-top: 0; }
+}
+.copy p { margin-top: 20px; max-width: 32em; }
+
+.phone {
+  margin: 0; max-width: 340px;
+  border-radius: 34px; padding: 10px;
+  background: var(--field);
+}
+.phone img { border-radius: 26px; width: 100%; }
+.phone.wide { max-width: 520px; border-radius: 30px; }
+.phone.wide img { border-radius: 22px; }
+
+.bands { list-style: none; padding: 0; margin: 28px 0 0; display: flex; flex-wrap: wrap; gap: 10px; }
+.bands li {
+  padding: 6px 14px; border-radius: 10px;
+  font-size: 15px; font-weight: 700; line-height: 1.6;
+}
+.b-safe { background: var(--safe-bg); color: var(--safe-fg); }
+.b-warn { background: var(--warn-bg); color: var(--warn-fg); }
+.b-alert { background: var(--alert-bg); color: var(--alert-fg); }
+.b-danger { background: var(--danger-bg); color: var(--danger-fg); }
+
+/* fallback list shown until home.png exists */
+.lines { display: grid; gap: 12px; max-width: 420px; }
+.line {
+  background: var(--surface); border-radius: 20px; padding: 18px 20px;
+  display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; align-items: center;
+}
+.line b { font-size: 18px; }
+.line span.tel { grid-column: 1; font-size: 14px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.line .badge { grid-row: 1 / span 2; grid-column: 2; padding: 4px 12px; border-radius: 8px; font-weight: 700; font-size: 15px; }
+.line .track { grid-column: 1 / -1; margin-top: 10px; height: 8px; }
+.line .track { --fg: var(--c); }
+
+/* ---------- notification band ---------- */
+.notify {
+  margin-top: var(--section);
+  background: var(--surface);
+  padding: var(--section) 0;
+}
+.notify .head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px clamp(32px, 6vw, 96px); align-items: end; }
+@media (max-width: 860px) { .notify .head { grid-template-columns: 1fr; } }
+.notify .head p { max-width: 30em; }
+.toast {
+  margin-top: clamp(40px, 6vw, 72px);
+  max-width: 560px;
+  background: var(--ground); border-radius: 24px; padding: 18px 22px;
+  display: grid; grid-template-columns: 36px 1fr; gap: 2px 14px;
+  font-family: var(--font-text); letter-spacing: 0;
+}
+.toast img { width: 36px; height: 36px; grid-row: 1 / span 3; }
+.toast .app { font-size: 13px; color: var(--ink-2); line-height: 1.5; }
+.toast b { font-size: 16px; line-height: 1.5; }
+.toast span { font-size: 15px; line-height: 1.6; color: var(--ink-2); }
+
+.when {
+  list-style: none; padding: 0; margin: clamp(28px, 4vw, 44px) 0 0;
+  display: flex; flex-wrap: wrap; gap: 10px;
+}
+.when li {
+  min-width: 5.2em; padding: 10px 16px; border-radius: 14px; text-align: center;
+  font-family: var(--font-display); font-weight: 800; font-size: clamp(17px, 1.8vw, 22px); line-height: 1.4; letter-spacing: 0;
+}
+.notify .more { margin-top: clamp(40px, 5vw, 64px); display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 28px clamp(32px, 5vw, 72px); }
+.notify .more p { font-size: 16px; }
+
+/* widget fallback */
+.widget {
+  max-width: 380px; border-radius: 28px; padding: 24px 26px;
+  background: #fcfcff; color: #191c1e;
+}
+.w-main { display: grid; gap: 2px; }
+.w-main span { font-size: 15px; font-weight: 700; color: #41484d; }
+.w-main b { font-family: var(--font-display); font-weight: 800; font-size: 52px; line-height: 1.1; letter-spacing: -0.02em; color: #ba1a1a; }
+.widget ul { list-style: none; padding: 16px 0 0; margin: 18px 0 0; display: grid; gap: 8px; background: none; }
+.widget li { display: flex; justify-content: space-between; font-size: 15px; font-weight: 700; line-height: 1.5; padding: 8px 12px; border-radius: 12px; background: #eef1f4; }
+.widget li b { font-variant-numeric: tabular-nums; }
+
+/* ---------- toppings ---------- */
+table.presets { margin-top: 28px; border-collapse: collapse; width: 100%; max-width: 520px; font-size: 15px; }
+.presets th, .presets td { text-align: left; padding: 10px 0; border-bottom: 1px solid var(--surface); }
+.presets td:last-child, .presets th:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.presets th { font-size: 13px; color: var(--ink-2); font-weight: 700; }
+
+/* ---------- small things ---------- */
+.extras { padding-top: var(--section); }
+.extras h2 { max-width: 14em; }
+.extras dl { margin: 40px 0 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 36px clamp(32px, 5vw, 72px); }
+.extras dt { font-family: var(--font-display); font-weight: 800; font-size: 19px; line-height: 1.5; letter-spacing: 0; }
+.extras dd { margin: 8px 0 0; font-size: 16px; }
+
+/* ---------- install ---------- */
+.install {
+  margin-top: var(--section);
+  background: var(--field); color: var(--field-ink);
+  padding: var(--section) 0;
+}
+.install .wrap { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 40px clamp(32px, 6vw, 96px); }
+@media (max-width: 860px) { .install .wrap { grid-template-columns: 1fr; } }
+.install h2 { color: #fff; }
+.install .cta { margin-top: 28px; }
+.install ol { margin: 0; padding-left: 1.4em; font-size: 18px; }
+.install ol li + li { margin-top: 18px; }
+.install ol li::marker { font-family: var(--font-display); font-weight: 800; color: var(--sim); }
+.install .small { color: var(--field-ink-2); margin-top: 28px; }
+
+/* ---------- faq ---------- */
+.faq { padding: var(--section) 0; }
+.faq h2 { align-self: start; }
+.faq .wrap { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: 32px clamp(32px, 6vw, 96px); }
+@media (max-width: 860px) { .faq .wrap { grid-template-columns: 1fr; } }
+details { background: var(--surface); border-radius: 20px; padding: 0 24px; }
+details + details { margin-top: 12px; }
+summary {
+  cursor: pointer; list-style: none;
+  padding: 20px 32px 20px 0; position: relative;
+  font-family: var(--font-display); font-weight: 700; font-size: 18px; line-height: 1.6; letter-spacing: 0;
+}
+summary::-webkit-details-marker { display: none; }
+summary::after {
+  content: "+"; position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+  font-size: 26px; font-weight: 400; color: var(--ink-2); transition: transform .2s ease;
+}
+details[open] summary::after { transform: translateY(-50%) rotate(45deg); }
+details p { padding: 0 0 22px; font-size: 16px; }
+details p + p { margin-top: -10px; }
+
+/* ---------- footer ---------- */
+footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64px, 9vw, 120px) 0 40px; }
+.big {
+  font-family: var(--font-display); font-weight: 800; color: #fff;
+  font-size: clamp(40px, 10vw, 136px); line-height: .95; white-space: nowrap; letter-spacing: -0.04em;
+  margin: 0 0 clamp(36px, 5vw, 64px);
+}
+.foot { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 28px clamp(32px, 5vw, 72px); font-size: 14px; line-height: 1.8; }
+.foot a { color: var(--field-ink); }
+.foot ul { list-style: none; padding: 0; margin: 0; }
+
+/* ---------- entrance (only when JS runs) ---------- */
+.js .rv { opacity: 0; transform: translateY(24px); }
+.js .rv.in { opacity: 1; transform: none; transition: opacity .6s ease, transform .7s cubic-bezier(.2,.7,.2,1); transition-delay: var(--d, 0ms); }
+@media (prefers-reduced-motion: reduce) {
+  .js .rv { opacity: 1; transform: none; }
+  *, *::before, *::after { transition-duration: 0s !important; }
+}
+[hidden] { display: none !important; }
+/* スクショが無い間は空の列を詰める */
+.shot-col:not(:has(> :not([hidden]))) { display: none; }
+.row:has(> .shot-col:not(:has(> :not([hidden])))) { grid-template-columns: 1fr; }
+.row:not(:has(> :not([hidden]))) { display: none; }
+</style>
+<script>document.documentElement.classList.add("js")</script>
+</head>
+<body>
+
+<header class="bar">
+  <div class="wrap">
+    <a class="mark" href="./"><img src="icon.svg" alt="" width="30" height="30">povo Manager</a>
+    <nav aria-label="ページ内">
+      <a href="#calc">残り日数</a>
+      <a href="#features">できること</a>
+      <a href="#install">インストール</a>
+      <a href="#faq">質問</a>
+    </nav>
+    <a class="btn sm" data-dl href="https://github.com/Fuku856/povo-manager/releases/latest">ダウンロード</a>
+  </div>
+</header>
+
+<main>
+<section class="hero" id="top">
+  <div class="wrap">
+    <div>
+      <h1>povoの<wbr>自動解約日を<wbr>数える<wbr>アプリ</h1>
+      <p class="lede">最後にトッピングを買った日から180日。povo Manager は回線ごとに残り日数を出して、期限が近づいたら通知します。Androidで使えます。</p>
+      <div class="cta">
+        <a class="btn" data-dl href="https://github.com/Fuku856/povo-manager/releases/latest">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 1.25C12.4142 1.25 12.75 1.58579 12.75 2V12.9726L14.4306 11.0119C14.7001 10.6974 15.1736 10.661 15.4881 10.9306C15.8026 11.2001 15.839 11.6736 15.5694 11.9881L12.5694 15.4881C12.427 15.6543 12.2189 15.75 12 15.75C11.7811 15.75 11.573 15.6543 11.4306 15.4881L8.43056 11.9881C8.16099 11.6736 8.19741 11.2001 8.51191 10.9306C8.8264 10.661 9.29988 10.6974 9.56944 11.0119L11.25 12.9726V2C11.25 1.58579 11.5858 1.25 12 1.25ZM6.99583 8.25196C7.41003 8.24966 7.74768 8.58357 7.74999 8.99778C7.7523 9.41199 7.41838 9.74964 7.00418 9.75194C5.91068 9.75803 5.1356 9.78643 4.54735 9.89448C3.98054 9.99859 3.65246 10.1658 3.40901 10.4092C3.13225 10.686 2.9518 11.0746 2.85315 11.8083C2.75159 12.5637 2.75 13.5648 2.75 15.0002V16.0002C2.75 17.4356 2.75159 18.4367 2.85315 19.1921C2.9518 19.9259 3.13225 20.3144 3.40901 20.5912C3.68577 20.868 4.07435 21.0484 4.80812 21.1471C5.56347 21.2486 6.56458 21.2502 8 21.2502H16C17.4354 21.2502 18.4365 21.2486 19.1919 21.1471C19.9257 21.0484 20.3142 20.868 20.591 20.5912C20.8678 20.3144 21.0482 19.9259 21.1469 19.1921C21.2484 18.4367 21.25 17.4356 21.25 16.0002V15.0002C21.25 13.5648 21.2484 12.5637 21.1469 11.8083C21.0482 11.0746 20.8678 10.686 20.591 10.4092C20.3475 10.1658 20.0195 9.99859 19.4527 9.89448C18.8644 9.78643 18.0893 9.75803 16.9958 9.75194C16.5816 9.74964 16.2477 9.41199 16.25 8.99778C16.2523 8.58357 16.59 8.24966 17.0042 8.25196C18.0857 8.25799 18.9871 8.28387 19.7236 8.41916C20.4816 8.55839 21.1267 8.82364 21.6517 9.34857C22.2536 9.95048 22.5125 10.7084 22.6335 11.6085C22.75 12.4754 22.75 13.5778 22.75 14.9453V16.0551C22.75 17.4227 22.75 18.525 22.6335 19.392C22.5125 20.2921 22.2536 21.0499 21.6517 21.6519C21.0497 22.2538 20.2919 22.5127 19.3918 22.6337C18.5248 22.7503 17.4225 22.7502 16.0549 22.7502H7.94513C6.57754 22.7502 5.47522 22.7503 4.60825 22.6337C3.70814 22.5127 2.95027 22.2538 2.34835 21.6519C1.74643 21.0499 1.48754 20.2921 1.36652 19.392C1.24996 18.525 1.24998 17.4227 1.25 16.0551V14.9453C1.24998 13.5778 1.24996 12.4754 1.36652 11.6085C1.48754 10.7084 1.74643 9.95048 2.34835 9.34857C2.87328 8.82363 3.51835 8.55839 4.27635 8.41916C5.01291 8.28387 5.9143 8.25798 6.99583 8.25196Z" fill="currentColor"/></svg>
+          APKをダウンロード
+        </a>
+        <p class="ver" data-ver>無料。Android 8.0 以降で使えます。</p>
+      </div>
+    </div>
+
+    <div class="calc" id="calc" data-ui data-band="warn" aria-live="polite">
+      <label for="last">最後にトッピングを買った日</label>
+      <input type="date" id="last" value="2026-05-13">
+      <p class="days"><span>あと</span><span class="num" id="days">25</span><span>日</span></p>
+      <div class="track" aria-hidden="true"><i id="bar" style="--p:14%"></i></div>
+      <p class="exp">自動解約日 <time id="exp" datetime="2026-11-09">2026年11月9日（月）</time></p>
+      <p class="note" id="note">日付を変えると、その場で計算し直します。アプリでは、これを回線の数だけ並べて毎日数え直します。</p>
+    </div>
+  </div>
+</section>
+
+<section class="why wrap" aria-label="作った理由">
+  <p class="rv">povo は基本料0円のまま回線を置いておけるので、サブ回線やデータ専用に2本、3本と増やしがちです。ただ、180日トッピングを買わずにいると解約されることがあります。</p>
+  <p class="rv" style="--d:80ms">1回線ならカレンダーに書いておけば足ります。2回線、3回線になると、どの番号でいつ何を買ったかを覚えていられません。それで、数える係をアプリにしました。</p>
+</section>
+
+<section class="feature wrap" id="features">
+  <div class="row">
+    <div class="shot-col rv">
+      <figure class="phone" data-shot>
+        <img src="img/home.png" alt="povo Manager のホーム画面。回線ごとのカードに残り日数のバッジと進捗バーが並んでいる" width="1080" height="2400" decoding="async" onerror="this.parentNode.hidden=true" onload="var f=this.parentNode.parentNode.querySelector('[data-fallback]');if(f)f.hidden=true">
+      </figure>
+      <div class="lines" data-ui data-fallback aria-label="ホーム画面の例">
+        <div class="line" style="--c:var(--safe-fg)"><b>メイン</b><span class="badge b-safe">あと160日</span><span class="tel">090-0000-0001</span><div class="track"><i style="--p:89%"></i></div></div>
+        <div class="line" style="--c:var(--warn-fg)"><b>サブ</b><span class="badge b-warn">あと25日</span><span class="tel">090-0000-0002</span><div class="track"><i style="--p:14%"></i></div></div>
+        <div class="line" style="--c:var(--danger-fg)"><b>データ専用</b><span class="badge b-danger">あと5日</span><span class="tel">090-0000-0003</span><div class="track"><i style="--p:3%"></i></div></div>
+      </div>
+    </div>
+    <div class="copy">
+      <h2 class="rv">回線を<wbr>まとめて<wbr>一覧に</h2>
+      <p class="rv" style="--d:70ms">電話番号と、最後にトッピングを買った日を入れるだけです。ホーム画面に回線がカードで並び、残り日数の少ない順にひと目でわかります。表示名とメモは自由に付けられます。</p>
+      <p class="rv" style="--d:140ms">残り日数でバッジと進捗バーの色が変わります。</p>
+      <ul class="bands rv" style="--d:200ms" aria-label="色の区切り">
+        <li class="b-safe">31日以上</li>
+        <li class="b-warn">30日以内</li>
+        <li class="b-alert">14日以内</li>
+        <li class="b-danger">7日以内と期限切れ</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="notify" aria-labelledby="notify-h">
+  <div class="wrap">
+    <div class="head">
+      <h2 id="notify-h" class="rv">期限の前に<wbr>通知が<wbr>届く</h2>
+      <p class="rv" style="--d:70ms">初期設定では、自動解約日の30日前、14日前、7日前、3日前、前日、当日に通知します。期限を過ぎても回線を消すまでは毎日知らせます。通知する時刻は0時から23時のあいだで選べます。</p>
+    </div>
+
+    <div class="toast rv" data-ui aria-label="通知の例">
+      <img src="icon.svg" alt="" width="36" height="36">
+      <span class="app">povo Manager</span>
+      <b>【povo】解約まであと7日: サブ</b>
+      <span><span id="toast-date">2026/11/09</span>までにトッピングの購入が必要です。</span>
+    </div>
+
+    <ol class="when rv" aria-label="初期設定で通知する日">
+      <li class="b-warn">30日前</li>
+      <li class="b-alert">14日前</li>
+      <li class="b-danger">7日前</li>
+      <li class="b-danger">3日前</li>
+      <li class="b-danger">前日</li>
+      <li class="b-danger">当日</li>
+    </ol>
+
+    <div class="more">
+      <div class="rv">
+        <h3>回線ごとに変えられる</h3>
+        <p>メイン回線は30日前から、捨ててもいい回線は前日だけ、のように回線ごとに通知の日を上書きできます。</p>
+      </div>
+      <div class="rv" style="--d:80ms">
+        <h3>トッピングの期限も</h3>
+        <p>データ追加などのトッピングにも有効期限があります。こちらは初期設定で3日前と前日に知らせます。</p>
+      </div>
+      <figure class="phone" data-shot style="margin:0">
+        <img src="img/notification.png" alt="通知シェードに povo Manager の通知が出ている画面" width="1080" height="2400" decoding="async" onerror="this.parentNode.hidden=true" onload="var f=this.parentNode.parentNode.querySelector('[data-fallback]');if(f)f.hidden=true">
+      </figure>
+    </div>
+  </div>
+</section>
+
+<section class="feature wrap" aria-labelledby="widget-h">
+  <div class="row flip">
+    <div class="shot-col rv">
+      <figure class="phone wide" data-shot>
+        <img src="img/widget.png" alt="スマートフォンのホーム画面に置いた povo Manager のウィジェット" width="1080" height="2400" decoding="async" onerror="this.parentNode.hidden=true" onload="var f=this.parentNode.parentNode.querySelector('[data-fallback]');if(f)f.hidden=true">
+      </figure>
+      <div class="widget" data-ui data-fallback aria-label="ウィジェットの例">
+        <p class="w-main"><span>データ専用</span><b>あと5日</b></p>
+        <ul>
+          <li><span>サブ</span><b>25日</b></li>
+          <li><span>仕事用</span><b>61日</b></li>
+          <li><span>メイン</span><b>160日</b></li>
+        </ul>
+      </div>
+    </div>
+    <div class="copy">
+      <h2 id="widget-h" class="rv">アプリを<wbr>開かずに<wbr>確かめる</h2>
+      <p class="rv" style="--d:70ms">ホーム画面のウィジェットに、期限がいちばん近い回線を大きく、ほかの回線を最大4つまで小さく出します。残り7日以内の回線は赤い文字になります。ウィジェットに出す回線と順番は設定で選べます。</p>
+    </div>
+  </div>
+</section>
+
+<section class="feature wrap" aria-labelledby="topping-h">
+  <div class="row">
+    <div class="shot-col rv">
+      <figure class="phone" data-shot>
+        <img src="img/purchase.png" alt="トッピングの購入を記録するシート。トッピングの一覧から選べる" width="1080" height="2400" decoding="async" onerror="this.parentNode.hidden=true" onload="var f=this.parentNode.parentNode.querySelector('[data-fallback]');if(f)f.hidden=true">
+      </figure>
+    </div>
+    <div class="copy split">
+      <h2 id="topping-h" class="rv">買ったら<wbr>記録する</h2>
+      <p class="rv" style="--d:70ms">トッピングを買ったら、回線を開いて購入日を記録します。よく使うトッピングは一覧から選べて、有効期限も自動で入ります。一覧にないものは名前を手で入れてください。</p>
+      <table class="presets rv" style="--d:140ms">
+        <thead><tr><th scope="col">一覧にあるトッピング</th><th scope="col">有効期間</th></tr></thead>
+        <tbody>
+          <tr><td>データ追加1GB</td><td>7日</td></tr>
+          <tr><td>データ追加3GB</td><td>30日</td></tr>
+          <tr><td>データ追加20GB</td><td>30日</td></tr>
+          <tr><td>データ追加60GB</td><td>90日</td></tr>
+          <tr><td>データ追加150GB</td><td>180日</td></tr>
+          <tr><td>データ使い放題（24時間）</td><td>1日</td></tr>
+          <tr><td>5分以内通話かけ放題</td><td>期限なし</td></tr>
+          <tr><td>通話かけ放題</td><td>期限なし</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="extras wrap" aria-labelledby="extras-h">
+  <h2 id="extras-h" class="rv">そのほかに<wbr>できること</h2>
+  <dl>
+    <div class="rv"><dt>カレンダーに登録</dt><dd>回線の画面から、自動解約日を Android のカレンダーアプリに予定として入れられます。</dd></div>
+    <div class="rv" style="--d:70ms"><dt>バックアップ</dt><dd>回線と購入履歴をJSONファイルに書き出せます。読み込むときは、今のデータに足すか、全部入れ替えるかを選べます。</dd></div>
+    <div class="rv" style="--d:140ms"><dt>解約した回線をしまう</dt><dd>もう使わない回線はアーカイブに移せます。一覧からは消えて、記録は残ります。</dd></div>
+    <div class="rv" style="--d:210ms"><dt>180日を変える</dt><dd>povo の規約が変わったときのために、解約までの日数を1日から3650日のあいだで変えられます。</dd></div>
+  </dl>
+  <div class="row" style="margin-top:clamp(48px,6vw,80px)">
+    <figure class="phone" data-shot><img src="img/detail.png" alt="回線の詳細画面。自動解約日とトッピングの購入履歴が並んでいる" width="1080" height="2400" decoding="async" onerror="this.parentNode.hidden=true" onload="var f=this.parentNode.parentNode.querySelector('[data-fallback]');if(f)f.hidden=true"></figure>
+    <figure class="phone" data-shot><img src="img/settings.png" alt="設定画面。通知のタイミングと通知時刻を選ぶ項目がある" width="1080" height="2400" decoding="async" onerror="this.parentNode.hidden=true" onload="var f=this.parentNode.parentNode.querySelector('[data-fallback]');if(f)f.hidden=true"></figure>
+  </div>
+</section>
+
+<section class="install" id="install" aria-labelledby="install-h">
+  <div class="wrap">
+    <div>
+      <h2 id="install-h">インストール</h2>
+      <div class="cta">
+        <a class="btn" data-dl href="https://github.com/Fuku856/povo-manager/releases/latest">APKをダウンロード</a>
+      </div>
+      <p class="ver" data-ver style="margin-top:14px">無料。Android 8.0 以降で使えます。</p>
+    </div>
+    <div>
+      <ol>
+        <li>Android のスマートフォンで、このページの「APKをダウンロード」を押します。</li>
+        <li>ダウンロードしたファイルを開きます。「この提供元のアプリを許可」と出たら、ブラウザに許可を出してください。</li>
+        <li>「インストール」を押して、終わったらアプリを開きます。最初に通知の許可を求められるので、許可してください。</li>
+      </ol>
+      <p class="small">Google Play ストアでは配布していません。ファイルは <a href="https://github.com/Fuku856/povo-manager/releases">GitHub の Releases</a> に置いてあり、GitHub Actions がソースコードからビルドしたものです。新しい版が出たら、同じ手順で上書きインストールすればデータはそのまま残ります。</p>
+    </div>
+  </div>
+</section>
+
+<section class="faq" id="faq" aria-labelledby="faq-h">
+  <div class="wrap">
+    <h2 id="faq-h">よくある質問</h2>
+    <div>
+      <details>
+        <summary>povoの180日ルールとは？</summary>
+        <p>povo 2.0 では、180日間有料トッピングを買わず、同じ期間の通話やSMSなどの従量料金の合計が660円を超えない場合、利用停止や契約解除になることがあるとされています。</p>
+        <p>条件は変わることがあるので、正確なところは <a href="https://povo.jp/">povo の公式サイト</a>で確認してください。</p>
+      </details>
+      <details>
+        <summary>通話料が660円を超えている月もありますが、日付は合っていますか？</summary>
+        <p>povo Manager はトッピングを買った日だけで数えていて、通話やSMSの料金は見ていません。そのため表示される自動解約日は、実際より早いことはあっても、遅いことはありません。</p>
+      </details>
+      <details>
+        <summary>電話番号などのデータはどこに保存されますか？</summary>
+        <p>スマートフォンの中だけです。povo Manager はインターネット接続の権限を持っていないので、登録した電話番号やメモが外に送られることはありません。機種変更のときはJSONファイルに書き出して移してください。</p>
+      </details>
+      <details>
+        <summary>iPhone版はありますか？</summary>
+        <p>ありません。Android 8.0 以降のスマートフォンで使えます。</p>
+      </details>
+      <details>
+        <summary>povoの公式アプリですか？</summary>
+        <p>違います。個人が作っている非公式のアプリで、povo や KDDI とは関係ありません。不具合や要望は <a href="https://github.com/Fuku856/povo-manager/issues">GitHub の Issues</a> に書いてもらえると助かります。</p>
+      </details>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p class="big">povo Manager</p>
+    <div class="foot">
+      <ul>
+        <li><a href="https://github.com/Fuku856/povo-manager">ソースコード（GitHub）</a></li>
+        <li><a href="https://github.com/Fuku856/povo-manager/releases">リリース一覧</a></li>
+        <li><a href="https://github.com/Fuku856/povo-manager/blob/main/LICENSE">MIT License</a></li>
+      </ul>
+      <p>povo Manager は個人が開発している非公式アプリです。povo は KDDI株式会社 の商標で、このアプリは povo および KDDI とは関係ありません。</p>
+      <p>見出しの書体は LINE Seed JP（LINEヤフー、OFL）と Yaku Han JP（Qrac、OFL と MIT）です。ダウンロードのアイコンは <a href="https://reicon.dev">Reicon</a>（MIT）のもので、元は Solar Icons（480 Design、CC BY 4.0）です。</p>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  // --- 計算機: アプリと同じく「最後の購入日 + 180日」を自動解約日とする ---
+  var PERIOD = 180;
+  var input = document.getElementById("last");
+  var calc = document.getElementById("calc");
+  var daysEl = document.getElementById("days");
+  var expEl = document.getElementById("exp");
+  var bar = document.getElementById("bar");
+  var note = document.getElementById("note");
+  var W = "日月火水木金土";
+
+  function today() { var d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
+  function iso(d) { return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+  function parse(v) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v); return m ? new Date(+m[1], m[2] - 1, +m[3]) : null; }
+  function band(n) { return n <= 7 ? "danger" : n <= 14 ? "alert" : n <= 30 ? "warn" : "safe"; }
+
+  function render() {
+    var last = parse(input.value);
+    if (!last) return;
+    var exp = new Date(last.getFullYear(), last.getMonth(), last.getDate() + PERIOD);
+    var n = Math.round((exp - today()) / 86400000);
+    calc.dataset.band = band(n);
+    expEl.textContent = exp.getFullYear() + "年" + (exp.getMonth() + 1) + "月" + exp.getDate() + "日（" + W[exp.getDay()] + "）";
+    expEl.setAttribute("datetime", iso(exp));
+    bar.style.setProperty("--p", Math.max(0, Math.min(100, n / PERIOD * 100)) + "%");
+    if (n < 0) {
+      daysEl.parentNode.firstChild.textContent = "";
+      daysEl.textContent = "期限切れ";
+      note.textContent = (-n) + "日過ぎています。回線が使えるか確認してください。";
+    } else if (n === 0) {
+      daysEl.parentNode.firstChild.textContent = "";
+      daysEl.textContent = "本日";
+      note.textContent = "今日が自動解約日です。今日中にトッピングを買えば、ここからまた180日です。";
+    } else {
+      daysEl.parentNode.firstChild.textContent = "あと";
+      daysEl.textContent = n;
+      note.textContent = "日付を変えると、その場で計算し直します。アプリでは、これを回線の数だけ並べて毎日数え直します。";
+    }
+    daysEl.nextSibling.textContent = n > 0 ? "日" : "";
+  }
+  input.max = iso(today());
+  var start = today(); start.setDate(start.getDate() - 155);
+  input.value = iso(start);
+  input.addEventListener("input", render);
+  var t7 = today(); t7.setDate(t7.getDate() + 7);
+  document.getElementById("toast-date").textContent = iso(t7).replace(/-/g, "/");
+  render();
+
+  // --- ダウンロード: 最新リリースの APK に直リンクする（失敗したら Releases ページのまま） ---
+  var KEY = "povo-latest-release";
+  function apply(r) {
+    if (!r || !r.url) return;
+    document.querySelectorAll("[data-dl]").forEach(function (a) { a.href = r.url; });
+    document.querySelectorAll("[data-ver]").forEach(function (p) {
+      p.textContent = r.tag + "（" + r.date + "公開）。無料、Android 8.0 以降で使えます。";
+    });
+  }
+  var cached = null;
+  try { cached = JSON.parse(sessionStorage.getItem(KEY)); } catch (e) {}
+  if (cached) apply(cached);
+  else if (window.fetch) {
+    fetch("https://api.github.com/repos/Fuku856/povo-manager/releases/latest", { headers: { Accept: "application/vnd.github+json" } })
+      .then(function (res) { return res.ok ? res.json() : null; })
+      .then(function (j) {
+        if (!j || !j.assets) return;
+        var apk = j.assets.filter(function (a) { return /\.apk$/i.test(a.name); })[0];
+        if (!apk) return;
+        var d = new Date(j.published_at);
+        var r = { url: apk.browser_download_url, tag: j.tag_name, date: d.getFullYear() + "年" + (d.getMonth() + 1) + "月" + d.getDate() + "日" };
+        try { sessionStorage.setItem(KEY, JSON.stringify(r)); } catch (e) {}
+        apply(r);
+      })
+      .catch(function () {});
+  }
+
+  // --- 表示されたら順に出す ---
+  var items = document.querySelectorAll(".rv");
+  if (!("IntersectionObserver" in window)) { items.forEach(function (el) { el.classList.add("in"); }); return; }
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } });
+  }, { rootMargin: "0px 0px -8% 0px" });
+  items.forEach(function (el) { io.observe(el); });
+})();
+</script>
+</body>
+</html>
