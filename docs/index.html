@@ -255,14 +255,6 @@ p { margin: 0; }
 .exp { margin-top: 18px; font-size: 18px; font-weight: 700; line-height: 1.6; }
 .calc .note { margin-top: 6px; font-size: 15px; line-height: 1.7; }
 
-/* ---------- statement ---------- */
-.why { padding-top: var(--section); }
-.why p {
-  max-width: 34em;
-  font-size: clamp(20px, 2.1vw, 26px); line-height: 1.85; letter-spacing: .02em;
-}
-.why p + p { margin-top: 1.2em; font-size: 17px; color: var(--ink-2); max-width: 40em; }
-
 /* ---------- feature rows ---------- */
 .feature { padding-top: var(--section); }
 .row {
@@ -292,6 +284,11 @@ p { margin: 0; }
 .phone img { border-radius: 26px; width: 100%; }
 .phone.wide { max-width: 520px; border-radius: 30px; }
 .phone.wide img { border-radius: 22px; }
+/* 下の空白を切り落とした画像: 切り口が見えるように下側の角丸と余白をなくす */
+.phone.cut { padding-bottom: 0; border-radius: 34px 34px 0 0; }
+.phone.cut img { border-radius: 26px 26px 0 0; }
+.phone.wide.cut { border-radius: 30px 30px 0 0; }
+.phone.wide.cut img { border-radius: 22px 22px 0 0; }
 
 .bands { list-style: none; padding: 0; margin: 28px 0 0; display: flex; flex-wrap: wrap; gap: 10px; }
 .bands li {
@@ -458,11 +455,6 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
   </div>
 </section>
 
-<section class="why wrap" aria-label="作った理由">
-  <p class="rv">povo は基本料0円のまま回線を置いておけるので、サブ回線やデータ専用に2本、3本と増やしがちです。ただ、180日トッピングを買わずにいると解約されることがあります。</p>
-  <p class="rv" style="--d:80ms">1回線ならカレンダーに書いておけば足ります。2回線、3回線になると、どの番号でいつ何を買ったかを覚えていられません。それで、数える係をアプリにしました。</p>
-</section>
-
 <section class="feature wrap" id="features">
   <div class="row">
     <div class="shot-col rv">
@@ -515,7 +507,7 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
         <h3>トッピングの期限も</h3>
         <p>データ追加などのトッピングにも有効期限があります。こちらは初期設定で3日前と前日に知らせます。</p>
       </div>
-      <figure class="phone wide" data-shot style="margin:0">
+      <figure class="phone wide cut" data-shot style="margin:0">
         <img src="img/notification.png" alt="通知シェードに povo Manager の通知が出ている画面" width="720" height="720" decoding="async" onerror="this.parentNode.hidden=true" onload="var f=this.parentNode.parentNode.querySelector('[data-fallback]');if(f)f.hidden=true">
       </figure>
     </div>
@@ -525,7 +517,7 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
 <section class="feature wrap" aria-labelledby="widget-h">
   <div class="row flip">
     <div class="shot-col rv">
-      <figure class="phone wide" data-shot>
+      <figure class="phone wide cut" data-shot>
         <img src="img/widget.png" alt="スマートフォンのホーム画面に置いた povo Manager のウィジェット" width="720" height="880" decoding="async" onerror="this.parentNode.hidden=true" onload="var f=this.parentNode.parentNode.querySelector('[data-fallback]');if(f)f.hidden=true">
       </figure>
     </div>
@@ -572,8 +564,8 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
     <div class="rv" style="--d:210ms"><dt>180日を変える</dt><dd>povo の規約が変わったときのために、解約までの日数を1日から3650日のあいだで変えられます。</dd></div>
   </dl>
   <div class="pair">
-    <figure class="phone" data-shot><img src="img/detail.png" alt="回線の詳細画面。自動解約日とトッピングの購入履歴が並んでいる" width="720" height="933" decoding="async" onerror="this.parentNode.hidden=true" onload="var f=this.parentNode.parentNode.querySelector('[data-fallback]');if(f)f.hidden=true"></figure>
-    <figure class="phone" data-shot><img src="img/settings.png" alt="設定画面。通知のタイミングと通知時刻を選ぶ項目がある" width="720" height="1600" decoding="async" onerror="this.parentNode.hidden=true" onload="var f=this.parentNode.parentNode.querySelector('[data-fallback]');if(f)f.hidden=true"></figure>
+    <figure class="phone cut" data-shot><img src="img/detail.png" alt="回線の詳細画面。自動解約日とトッピングの購入履歴が並んでいる" width="720" height="1000" decoding="async" onerror="this.parentNode.hidden=true" onload="var f=this.parentNode.parentNode.querySelector('[data-fallback]');if(f)f.hidden=true"></figure>
+    <figure class="phone cut" data-shot><img src="img/settings.png" alt="設定画面。通知のタイミングと通知時刻を選ぶ項目がある" width="720" height="1000" decoding="async" onerror="this.parentNode.hidden=true" onload="var f=this.parentNode.parentNode.querySelector('[data-fallback]');if(f)f.hidden=true"></figure>
   </div>
 </section>
 
