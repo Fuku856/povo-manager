@@ -13,7 +13,7 @@
 <meta property="og:type" content="website">
 <meta property="og:locale" content="ja_JP">
 <meta property="og:site_name" content="povo Manager">
-<meta property="og:title" content="povo Manager｜povoの自動解約日を数えるAndroidアプリ">
+<meta property="og:title" content="povo Manager｜povoの自動解約日を管理するAndroidアプリ">
 <meta property="og:description" content="最後にトッピングを買った日から180日。回線ごとに残り日数を出して、期限が近づいたら通知します。">
 <meta property="og:url" content="https://fuku856.github.io/povo-manager/">
 <meta property="og:image" content="https://fuku856.github.io/povo-manager/og.png">
@@ -59,7 +59,7 @@
     {
       "@type": "Question",
       "name": "電話番号などのデータはどこに保存されますか？",
-      "acceptedAnswer": { "@type": "Answer", "text": "スマートフォンの中だけです。povo Manager はインターネット接続の権限を持っていないので、登録した電話番号やメモが外部に送られることはありません。機種変更のときはJSONファイルに書き出して移せます。" }
+      "acceptedAnswer": { "@type": "Answer", "text": "スマートフォンの中だけです。povo Manager はインターネット接続の権限を持っていないので、登録した電話番号やメモが外部に送られることはありません。機種変更のときはバックアップファイルに書き出して移せます。" }
     },
     {
       "@type": "Question",
@@ -434,7 +434,7 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
 <section class="hero" id="top">
   <div class="wrap">
     <div>
-      <h1>povoの<wbr>自動解約日を<wbr>管理<wbr>アプリ</h1>
+      <h1>povoの<wbr>自動解約日を<wbr>管理する<wbr>アプリ</h1>
       <p class="lede">最後にトッピングを買った日から180日。povo Manager は回線ごとに残り日数を出して、期限が近づいたら通知します。</p>
       <div class="cta">
         <a class="btn" data-dl href="https://github.com/Fuku856/povo-manager/releases/latest">
@@ -451,7 +451,7 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
       <p class="days"><span>あと</span><span class="num" id="days">25</span><span>日</span></p>
       <div class="track" aria-hidden="true"><i id="bar" style="--p:14%"></i></div>
       <p class="exp">自動解約日 <time id="exp" datetime="2026-11-09">2026年11月9日（月）</time></p>
-      <p class="note" id="note">日付を変えると、自動で計算し直します。アプリでは、複数回線の管理、解約日のお知らせができます。</p>
+      <p class="note" id="note">日付を変えると、自動で計算し直します。アプリでは、複数回線の管理や解約日の通知ができます。</p>
     </div>
   </div>
 </section>
@@ -486,7 +486,7 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
   <div class="wrap">
     <div class="head">
       <h2 id="notify-h" class="rv">期限の前に<wbr>通知で<wbr>お知らせ</h2>
-      <p class="rv" style="--d:70ms">初期設定では、自動解約日の30日前、14日前、7日前、3日前、前日、当日 に通知します。</p>
+      <p class="rv" style="--d:70ms">初期設定では、自動解約日の30日前、14日前、7日前、3日前、前日、当日に通知します。</p>
     </div>
 
 
@@ -502,7 +502,7 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
     <div class="more">
       <div class="rv">
         <h3>回線ごとに変えられる</h3>
-        <p>メイン回線は30日前から、捨ててもいい回線は前日だけ、のように回線ごとに個別設定ができます。</p>
+        <p>メイン回線は30日前から、捨ててもいい回線は前日だけ、のように回線ごとに通知する日を設定できます。</p>
       </div>
       <div class="rv" style="--d:80ms">
         <h3>トッピングの期限も</h3>
@@ -559,8 +559,8 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
 <section class="extras wrap" aria-labelledby="extras-h">
   <h2 id="extras-h" class="rv">そのほかに<wbr>できること</h2>
   <dl>
-    <div class="rv"><dt>カレンダーに登録</dt><dd>回線の画面から、自動解約日を デフォルト のカレンダーアプリに予定として入れられます。</dd></div>
-    <div class="rv" style="--d:70ms"><dt>バックアップ</dt><dd>回線と購入履歴を バックアップファイルに書き出せます。読み込むときは、今のデータに足すか、全部入れ替えるかを選べます。</dd></div>
+    <div class="rv"><dt>カレンダーに登録</dt><dd>回線の画面から、自動解約日を標準のカレンダーアプリに予定として入れられます。</dd></div>
+    <div class="rv" style="--d:70ms"><dt>バックアップ</dt><dd>回線と購入履歴をバックアップファイルに書き出せます。読み込むときは、今のデータに足すか、全部入れ替えるかを選べます。</dd></div>
     <div class="rv" style="--d:140ms"><dt>解約した回線をアーカイブ</dt><dd>もう使わない回線はアーカイブに移せます。一覧からは消えて、記録は残ります。</dd></div>
   </dl>
   <div class="pair">
@@ -596,7 +596,7 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
       <details>
         <summary>povoの180日ルールとは？</summary>
         <p>povo 2.0 では、180日間有料トッピングを買わず、同じ期間の通話やSMSなどの従量料金の合計が660円を超えない場合、利用停止や契約解除になることがあるとされています。</p>
-        <p>条件は変わることがあるので、 <a href="https://povo.jp/">povo の公式サイト</a>で確認してください。</p>
+        <p>条件は変わることがあるので、<a href="https://povo.jp/">povo の公式サイト</a>で確認してください。</p>
       </details>
       <details>
         <summary>通話料が660円を超えている月もありますが、日付は合っていますか？</summary>
@@ -629,6 +629,7 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
         <li><a href="https://github.com/Fuku856/povo-manager/blob/main/LICENSE">MIT License</a></li>
       </ul>
       <p>povo Manager は個人が開発している非公式アプリです。povo は KDDI株式会社 の商標で、このアプリは povo および KDDI とは関係ありません。</p>
+      <p>ダウンロードのアイコンは <a href="https://reicon.dev">Reicon</a>（MIT）のもので、元は Solar Icons（480 Design、CC BY 4.0）です。</p>
     </div>
   </div>
 </footer>
@@ -662,7 +663,7 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
     if (n < 0) {
       daysEl.parentNode.firstChild.textContent = "";
       daysEl.textContent = "期限切れ";
-      note.textContent = (-n) + "日 過ぎています。回線が使えるか確認してください。";
+      note.textContent = (-n) + "日過ぎています。回線が使えるか確認してください。";
     } else if (n === 0) {
       daysEl.parentNode.firstChild.textContent = "";
       daysEl.textContent = "本日";
@@ -670,7 +671,7 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
     } else {
       daysEl.parentNode.firstChild.textContent = "あと";
       daysEl.textContent = n;
-      note.textContent = "日付を変えると、自動で計算し直します。アプリでは、複数回線の管理、解約日のお知らせができます。";
+      note.textContent = "日付を変えると、自動で計算し直します。アプリでは、複数回線の管理や解約日の通知ができます。";
     }
     daysEl.nextSibling.textContent = n > 0 ? "日" : "";
   }
@@ -686,7 +687,7 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
     if (!r || !r.url) return;
     document.querySelectorAll("[data-dl]").forEach(function (a) { a.href = r.url; });
     document.querySelectorAll("[data-ver]").forEach(function (p) {
-      p.textContent = r.tag + "（" + r.date + "公開）。無料、Android 8.0 以降で使えます。";
+      p.textContent = r.tag + "（" + r.date + "公開）。無料。Android 8.0 以降";
     });
   }
   var cached = null;
