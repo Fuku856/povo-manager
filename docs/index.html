@@ -128,7 +128,6 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; scroll-padding-top: 88px; }
-@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
 body {
   margin: 0;
   background: var(--ground);
@@ -927,6 +926,18 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
   head.querySelector(".mark").addEventListener("click", toTop);
   totop.addEventListener("click", toTop);
   head.querySelector('nav a[href="#calc"]').addEventListener("click", function (e) { if (wide.matches) toTop(e); });
+
+  // --- ナビのリンクだけなめらかにスクロールする。html に scroll-behavior を付けるとホイールのスクロールまで速く感じるため ---
+  head.querySelectorAll('nav a[href^="#"]').forEach(function (a) {
+    a.addEventListener("click", function (e) {
+      if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+      var target = document.querySelector(a.getAttribute("href"));
+      if (!target) return;
+      e.preventDefault();
+      history.pushState(null, "", a.getAttribute("href"));
+      target.scrollIntoView({ behavior: still.matches ? "auto" : "smooth" });
+    });
+  });
 
   // --- 表示されたら順に出す ---
   var items = document.querySelectorAll(".rv");
