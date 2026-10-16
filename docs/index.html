@@ -32,7 +32,7 @@
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   "name": "povo Manager",
-  "operatingSystem": "Android 8.0+",
+  "operatingSystem": "Android",
   "applicationCategory": "UtilitiesApplication",
   "description": "povo 2.0 の自動解約日（最後のトッピング購入日から180日後）を複数回線まとめて管理し、期限前に通知するAndroidアプリ。",
   "url": "https://fuku856.github.io/povo-manager/",
@@ -65,7 +65,7 @@
     {
       "@type": "Question",
       "name": "iPhone版はありますか？",
-      "acceptedAnswer": { "@type": "Answer", "text": "ありません。Android 8.0 以降のスマートフォンで使えます。" }
+      "acceptedAnswer": { "@type": "Answer", "text": "ありません。Android のスマートフォンで使えます。" }
     },
     {
       "@type": "Question",
@@ -128,6 +128,7 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 html { -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; scroll-padding-top: 88px; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
 body {
   margin: 0;
   background: var(--ground);
@@ -213,8 +214,8 @@ p { margin: 0; }
   margin-right: auto;
 }
 .mark img { width: 30px; height: 30px; }
-.bar nav { display: flex; gap: 24px; font-size: 15px; }
-.bar nav a { text-decoration: none; color: var(--field-ink-2); transition: color .15s ease; }
+.bar nav { display: flex; gap: 2px; font-size: 15px; }
+.bar nav a { padding: 6px 12px; border-radius: 999px; text-decoration: none; color: var(--field-ink-2); transition: color .15s ease, background-color .15s ease; }
 .bar nav a:hover, .bar.float nav a { color: var(--field-ink); }
 .mark, .bar nav a, .btn { white-space: nowrap; }
 
@@ -274,6 +275,8 @@ p { margin: 0; }
     transition: opacity .2s ease calc(var(--i, 0) * 30ms), transform .25s var(--ease) calc(var(--i, 0) * 30ms), background-color .15s ease;
   }
 }
+/* 今いるセクションのリンク */
+.bar nav a[aria-current] { color: var(--field-ink); background: color-mix(in srgb, var(--field-ink) 10%, transparent); }
 @media (max-width: 400px) {
   .bar.float .wrap { padding-left: 14px; }
   .mark { font-size: 16px; gap: 8px; }
@@ -318,7 +321,16 @@ p { margin: 0; }
   font-size: clamp(17px, 1.6vw, 20px); color: var(--field-ink);
 }
 .cta { margin-top: 36px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 22px; }
-.ver { font-size: 14px; color: var(--field-ink-2); line-height: 1.6; }
+/* 最新版の情報。バージョンと公開日は GitHub から取れたときだけ出す */
+.meta {
+  list-style: none; padding: 0; margin: 20px 0 0;
+  display: flex; flex-wrap: wrap; gap: 8px;
+  font-size: 14px; line-height: 1.6; color: var(--field-ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.meta li { padding: 4px 12px; border-radius: 10px; background: color-mix(in srgb, var(--field-ink) 8%, transparent); }
+.meta a { text-decoration: underline; text-decoration-color: color-mix(in srgb, currentColor 40%, transparent); text-underline-offset: 3px; }
+.meta a:hover { color: var(--field-ink); }
 
 /* the calculator: a copy of the app's line card */
 .calc {
@@ -371,7 +383,7 @@ p { margin: 0; }
 .row.flip .shot-col { order: 2; }
 @media (max-width: 860px) {
   .row, .row.flip { grid-template-columns: 1fr; }
-  .row.flip .shot-col { order: 0; }
+  .row .shot-col { order: 2; }
 }
 .copy h2 { max-width: 12em; }
 @media (min-width: 861px) {
@@ -480,7 +492,7 @@ table.presets { margin-top: 28px; border-collapse: collapse; width: 100%; max-wi
 .way h3 { color: var(--field-head); font-size: clamp(20px, 2vw, 24px); }
 .way > p { margin-top: 12px; font-size: 16px; }
 .install .cta { margin-top: 24px; }
-.install .ver { margin-top: 12px; }
+.install .meta { margin-top: 16px; }
 .btn.outline {
   background: transparent; color: var(--field-ink);
   border: 2px solid color-mix(in srgb, var(--field-ink) 40%, transparent);
@@ -538,6 +550,29 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
 .foot ul { list-style: none; padding: 0 0 0 26px; margin: 0; }
 .foot .gh svg { display: inline-block; width: 18px; height: 18px; margin: 0 8px 0 -26px; vertical-align: -4px; }
 
+/* ---------- back to top ---------- */
+/* ヒーローを過ぎたら右下に出る。どの面の上でも埋もれないよう、地とのコントラストが 3:1 を超える濃さの枠を付ける */
+.totop {
+  display: none;
+  position: fixed; z-index: 40;
+  right: max(16px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom));
+  width: 48px; height: 48px; padding: 0; margin: 0; cursor: pointer;
+  border: 2px solid color-mix(in srgb, var(--field-ink) 50%, transparent); border-radius: 999px;
+  background: var(--field-raise); color: var(--field-ink);
+  opacity: 0; visibility: hidden; transform: translateY(8px);
+  transition: opacity .2s ease, transform .2s cubic-bezier(.2,.7,.2,1), visibility 0s linear .2s, background-color .15s ease;
+}
+.js .totop { display: grid; place-items: center; }
+.totop.show {
+  opacity: 1; visibility: visible; transform: none;
+  transition: opacity .2s ease, transform .2s cubic-bezier(.2,.7,.2,1), visibility 0s, background-color .15s ease;
+}
+.totop:hover { background: color-mix(in srgb, var(--field-ink) 10%, var(--field-raise)); }
+.totop:active { transform: scale(.94); }
+.totop svg { width: 22px; height: 22px; }
+/* 1カラムでは最後の行がボタンの下に隠れないようにする */
+@media (max-width: 860px) { footer { padding-bottom: 88px; } }
+
 /* ---------- entrance (only when JS runs) ---------- */
 .js .rv { opacity: 0; transform: translateY(24px); }
 .js .rv.in { opacity: 1; transform: none; transition: opacity .6s ease, transform .7s cubic-bezier(.2,.7,.2,1); transition-delay: var(--d, 0ms); }
@@ -582,8 +617,12 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
           <svg viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 1.25C12.4142 1.25 12.75 1.58579 12.75 2V12.9726L14.4306 11.0119C14.7001 10.6974 15.1736 10.661 15.4881 10.9306C15.8026 11.2001 15.839 11.6736 15.5694 11.9881L12.5694 15.4881C12.427 15.6543 12.2189 15.75 12 15.75C11.7811 15.75 11.573 15.6543 11.4306 15.4881L8.43056 11.9881C8.16099 11.6736 8.19741 11.2001 8.51191 10.9306C8.8264 10.661 9.29988 10.6974 9.56944 11.0119L11.25 12.9726V2C11.25 1.58579 11.5858 1.25 12 1.25ZM6.99583 8.25196C7.41003 8.24966 7.74768 8.58357 7.74999 8.99778C7.7523 9.41199 7.41838 9.74964 7.00418 9.75194C5.91068 9.75803 5.1356 9.78643 4.54735 9.89448C3.98054 9.99859 3.65246 10.1658 3.40901 10.4092C3.13225 10.686 2.9518 11.0746 2.85315 11.8083C2.75159 12.5637 2.75 13.5648 2.75 15.0002V16.0002C2.75 17.4356 2.75159 18.4367 2.85315 19.1921C2.9518 19.9259 3.13225 20.3144 3.40901 20.5912C3.68577 20.868 4.07435 21.0484 4.80812 21.1471C5.56347 21.2486 6.56458 21.2502 8 21.2502H16C17.4354 21.2502 18.4365 21.2486 19.1919 21.1471C19.9257 21.0484 20.3142 20.868 20.591 20.5912C20.8678 20.3144 21.0482 19.9259 21.1469 19.1921C21.2484 18.4367 21.25 17.4356 21.25 16.0002V15.0002C21.25 13.5648 21.2484 12.5637 21.1469 11.8083C21.0482 11.0746 20.8678 10.686 20.591 10.4092C20.3475 10.1658 20.0195 9.99859 19.4527 9.89448C18.8644 9.78643 18.0893 9.75803 16.9958 9.75194C16.5816 9.74964 16.2477 9.41199 16.25 8.99778C16.2523 8.58357 16.59 8.24966 17.0042 8.25196C18.0857 8.25799 18.9871 8.28387 19.7236 8.41916C20.4816 8.55839 21.1267 8.82364 21.6517 9.34857C22.2536 9.95048 22.5125 10.7084 22.6335 11.6085C22.75 12.4754 22.75 13.5778 22.75 14.9453V16.0551C22.75 17.4227 22.75 18.525 22.6335 19.392C22.5125 20.2921 22.2536 21.0499 21.6517 21.6519C21.0497 22.2538 20.2919 22.5127 19.3918 22.6337C18.5248 22.7503 17.4225 22.7502 16.0549 22.7502H7.94513C6.57754 22.7502 5.47522 22.7503 4.60825 22.6337C3.70814 22.5127 2.95027 22.2538 2.34835 21.6519C1.74643 21.0499 1.48754 20.2921 1.36652 19.392C1.24996 18.525 1.24998 17.4227 1.25 16.0551V14.9453C1.24998 13.5778 1.24996 12.4754 1.36652 11.6085C1.48754 10.7084 1.74643 9.95048 2.34835 9.34857C2.87328 8.82363 3.51835 8.55839 4.27635 8.41916C5.01291 8.28387 5.9143 8.25798 6.99583 8.25196Z" fill="currentColor"/></svg>
           APKをダウンロード
         </a>
-        <p class="ver" data-ver>Android 8.0 以降</p>
       </div>
+      <ul class="meta" aria-label="最新版の情報">
+        <li data-tag hidden></li>
+        <li data-date hidden></li>
+        <li><a href="https://github.com/Fuku856/povo-manager/blob/main/LICENSE">MIT License</a></li>
+      </ul>
     </div>
 
     <div class="calc" id="calc" data-ui data-band="warn" aria-live="polite">
@@ -721,7 +760,11 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
         <div class="cta">
           <a class="btn" data-dl href="https://github.com/Fuku856/povo-manager/releases/latest">APKをダウンロード</a>
         </div>
-        <p class="ver" data-ver>Android 8.0 以降</p>
+        <ul class="meta" aria-label="最新版の情報">
+          <li data-tag hidden></li>
+          <li data-date hidden></li>
+          <li><a href="https://github.com/Fuku856/povo-manager/blob/main/LICENSE">MIT License</a></li>
+        </ul>
       </div>
       <div class="way rv" style="--d:80ms">
         <h3>Obtainium で自動更新</h3>
@@ -754,7 +797,7 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
       </details>
       <details>
         <summary>iPhone版はありますか？</summary>
-        <p>ありません。Android 8.0 以降のスマートフォンで使えます。</p>
+        <p>ありません。Android のスマートフォンで使えます。</p>
       </details>
       <details>
         <summary>povo の公式アプリですか？</summary>
@@ -778,6 +821,8 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
     </div>
   </div>
 </footer>
+
+<button class="totop" type="button" aria-label="ページの先頭に戻る"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5.5 11.5 12 5l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 
 <script>
 (function () {
@@ -827,13 +872,12 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
   render();
 
   // --- ダウンロード: 最新リリースの APK に直リンクする（失敗したら Releases ページのまま） ---
-  var KEY = "povo-latest-release-v2";
+  var KEY = "povo-latest-release-v3";
   function apply(r) {
     if (!r || !r.url) return;
     document.querySelectorAll("[data-dl]").forEach(function (a) { a.href = r.url; });
-    document.querySelectorAll("[data-ver]").forEach(function (p) {
-      p.textContent = r.tag + "。Android 8.0 以降";
-    });
+    document.querySelectorAll("[data-tag]").forEach(function (li) { li.textContent = r.tag; li.hidden = false; });
+    if (r.date) document.querySelectorAll("[data-date]").forEach(function (li) { li.textContent = r.date + "公開"; li.hidden = false; });
   }
   var cached = null;
   try { cached = JSON.parse(sessionStorage.getItem(KEY)); } catch (e) {}
@@ -845,7 +889,9 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
         if (!j || !j.assets) return;
         var apk = j.assets.filter(function (a) { return /\.apk$/i.test(a.name); })[0];
         if (!apk) return;
+        var d = new Date(j.published_at);
         var r = { url: apk.browser_download_url, tag: j.tag_name };
+        if (!isNaN(d)) r.date = d.getFullYear() + "年" + (d.getMonth() + 1) + "月" + d.getDate() + "日";
         try { sessionStorage.setItem(KEY, JSON.stringify(r)); } catch (e) {}
         apply(r);
       })
@@ -868,6 +914,20 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
   var wide = window.matchMedia("(min-width: 961px)");
   if (wide.addEventListener) wide.addEventListener("change", function () { setMenu(false); });
 
+  // --- 最上部へ戻る: ロゴ、戻るボタン、PC では「残り日数」も（計算機がヒーローの横にあるため） ---
+  var still = window.matchMedia("(prefers-reduced-motion: reduce)");
+  function toTop(e) {
+    if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    setMenu(false);
+    if (location.hash) history.replaceState(null, "", location.pathname + location.search);
+    window.scrollTo({ top: 0, behavior: still.matches ? "auto" : "smooth" });
+  }
+  var totop = document.querySelector(".totop");
+  head.querySelector(".mark").addEventListener("click", toTop);
+  totop.addEventListener("click", toTop);
+  head.querySelector('nav a[href="#calc"]').addEventListener("click", function (e) { if (wide.matches) toTop(e); });
+
   // --- 表示されたら順に出す ---
   var items = document.querySelectorAll(".rv");
   if (!("IntersectionObserver" in window)) { items.forEach(function (el) { el.classList.add("in"); }); return; }
@@ -876,9 +936,37 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
   new IntersectionObserver(function (entries) {
     head.classList.toggle("float", !entries[0].isIntersecting);
   }).observe(document.querySelector("[data-top]"));
+
+  // --- 戻るボタン: ヒーローが見えなくなったら出す ---
+  new IntersectionObserver(function (entries) {
+    totop.classList.toggle("show", !entries[0].isIntersecting);
+  }).observe(document.querySelector(".hero"));
+
+  // --- ナビ: 画面の真ん中を過ぎたセクションのリンクを強調する。リンクの無いセクションは直前のリンクに含める ---
+  // 最後の「質問」は真ん中まで上がりきらないので、ページの一番下に着いたら「質問」にする
+  var links = head.querySelectorAll("nav a"), sections = document.querySelectorAll("main > section"), group = "#calc";
+  sections.forEach(function (s) {
+    if (s.id && head.querySelector('nav a[href="#' + s.id + '"]')) group = "#" + s.id;
+    s.dataset.nav = group;
+  });
+  var ticking = false;
+  function spy() {
+    ticking = false;
+    var now = sections[0].dataset.nav, mid = window.innerHeight / 2;
+    sections.forEach(function (s) { if (s.getBoundingClientRect().top <= mid) now = s.dataset.nav; });
+    if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2) now = sections[sections.length - 1].dataset.nav;
+    links.forEach(function (a) {
+      if (a.getAttribute("href") === now) a.setAttribute("aria-current", "true");
+      else a.removeAttribute("aria-current");
+    });
+  }
+  window.addEventListener("scroll", function () { if (!ticking) { ticking = true; requestAnimationFrame(spy); } }, { passive: true });
+  window.addEventListener("resize", spy);
+  spy();
+
   var io = new IntersectionObserver(function (entries) {
     entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } });
-  }, { rootMargin: "0px 0px -8% 0px" });
+  }, { rootMargin: "0px 0px 10% 0px" });
   items.forEach(function (el) { io.observe(el); });
 })();
 </script>
