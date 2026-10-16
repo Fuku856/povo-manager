@@ -551,14 +551,14 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
 .foot .gh svg { display: inline-block; width: 18px; height: 18px; margin: 0 8px 0 -26px; vertical-align: -4px; }
 
 /* ---------- back to top ---------- */
-/* ヒーローを過ぎたら右下に出る。見た目はヘッダーのピルにそろえる */
+/* ヒーローを過ぎたら右下に出る。どの面の上でも埋もれないよう、地とのコントラストが 3:1 を超える濃さの枠を付ける */
 .totop {
   display: none;
   position: fixed; z-index: 40;
   right: max(16px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom));
   width: 48px; height: 48px; padding: 0; margin: 0; cursor: pointer;
-  border: 1px solid color-mix(in srgb, var(--field-ink) 14%, transparent); border-radius: 999px;
-  background: var(--field); color: var(--field-ink);
+  border: 2px solid color-mix(in srgb, var(--field-ink) 50%, transparent); border-radius: 999px;
+  background: var(--field-raise); color: var(--field-ink);
   opacity: 0; visibility: hidden; transform: translateY(8px);
   transition: opacity .2s ease, transform .2s cubic-bezier(.2,.7,.2,1), visibility 0s linear .2s, background-color .15s ease;
 }
@@ -567,7 +567,7 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
   opacity: 1; visibility: visible; transform: none;
   transition: opacity .2s ease, transform .2s cubic-bezier(.2,.7,.2,1), visibility 0s, background-color .15s ease;
 }
-.totop:hover { background: color-mix(in srgb, var(--field-ink) 10%, var(--field)); }
+.totop:hover { background: color-mix(in srgb, var(--field-ink) 10%, var(--field-raise)); }
 .totop:active { transform: scale(.94); }
 .totop svg { width: 22px; height: 22px; }
 /* 1カラムでは最後の行がボタンの下に隠れないようにする */
@@ -822,7 +822,7 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
   </div>
 </footer>
 
-<button class="totop" type="button" aria-label="ページの先頭に戻る"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5.5 11.5 12 5l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+<button class="totop" type="button" aria-label="ページの先頭に戻る"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5.5 11.5 12 5l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 
 <script>
 (function () {
