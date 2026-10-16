@@ -526,7 +526,8 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
   margin: 0 0 clamp(28px, 4vw, 48px);
   display: flex; align-items: center; gap: .25em;
 }
-.big img { flex: none; width: 1em; height: 1em; }
+/* p・g の下に伸びる部分まで含めた文字全体の真ん中に合わせる */
+.big img { flex: none; width: 1em; height: 1em; transform: translateY(.13em); }
 /* ダークではアイコンの背景がフッターと同じ色になるので、淡い縁で角丸の形を見せる */
 @media (prefers-color-scheme: dark) {
   .big img { border-radius: 22%; box-shadow: 0 0 0 1px color-mix(in srgb, var(--field-ink) 22%, transparent); }
