@@ -524,10 +524,13 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
   font-family: var(--font-display); font-weight: 800; color: var(--field-head);
   font-size: clamp(28px, 5vw, 64px); line-height: 1; white-space: nowrap; letter-spacing: -0.02em;
   margin: 0 0 clamp(28px, 4vw, 48px);
-  display: flex; align-items: baseline; gap: .2em;
+  display: flex; align-items: center; gap: .25em;
 }
-/* アイコンの SIM カードの部分だけを切り出して、文字の高さにそろえる */
-.big svg { flex: none; height: .72em; width: auto; }
+.big img { flex: none; width: 1em; height: 1em; }
+/* ダークではアイコンの背景がフッターと同じ色になるので、淡い縁で角丸の形を見せる */
+@media (prefers-color-scheme: dark) {
+  .big img { border-radius: 22%; box-shadow: 0 0 0 1px color-mix(in srgb, var(--field-ink) 22%, transparent); }
+}
 .foot { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 28px clamp(32px, 5vw, 72px); font-size: 14px; line-height: 1.8; }
 .foot a { color: var(--field-ink); }
 /* ロゴを左にはみ出させて、どの行も「ソースコード」の文字の位置にそろえる */
@@ -763,7 +766,7 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
 
 <footer>
   <div class="wrap">
-    <p class="big"><svg viewBox="30 18 48 78" aria-hidden="true"><path fill="#4FC3F7" d="M30,18 L66,18 L78,30 L78,90 A6,6 0 0 1 72,96 L36,96 A6,6 0 0 1 30,90 Z"/><path fill="#1A1C1E" d="M42,54 L51,63 L68,46 L72,50 L51,71 L38,58 Z"/></svg>povo Manager</p>
+    <p class="big"><img src="icon.svg" alt="" width="64" height="64">povo Manager</p>
     <div class="foot">
       <ul>
         <li><a class="gh" href="https://github.com/Fuku856/povo-manager"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M6.766 11.328c-2.063-.25-3.516-1.734-3.516-3.656 0-.781.281-1.625.75-2.188-.203-.515-.172-1.609.063-2.062.625-.078 1.468.25 1.968.703.594-.187 1.219-.281 1.985-.281.765 0 1.39.094 1.953.265.484-.437 1.344-.765 1.969-.687.218.422.25 1.515.046 2.047.5.593.766 1.39.766 2.203 0 1.922-1.453 3.375-3.547 3.64.531.344.89 1.094.89 1.954v1.625c0 .468.391.734.86.547C13.781 14.359 16 11.53 16 8.03 16 3.61 12.406 0 7.984 0 3.563 0 0 3.61 0 8.031a7.88 7.88 0 0 0 5.172 7.422c.422.156.828-.125.828-.547v-1.25c-.219.094-.5.156-.75.156-1.031 0-1.64-.562-2.078-1.609-.172-.422-.36-.672-.719-.719-.187-.015-.25-.093-.25-.187 0-.188.313-.328.625-.328.453 0 .844.281 1.25.86.313.452.64.655 1.031.655s.641-.14 1-.5c.266-.265.47-.5.657-.656"/></svg>ソースコード</a></li>
