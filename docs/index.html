@@ -118,7 +118,7 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: 88px; }
 body {
   margin: 0;
   background: var(--ground);
@@ -156,13 +156,46 @@ p { margin: 0; }
 .small { font-size: 14px; line-height: 1.7; color: var(--ink-2); }
 
 /* ---------- bar ---------- */
+/* 最上部では全幅のバー。スクロールすると .float が付いて、すりガラスのピルになる */
+.top { position: absolute; top: 0; left: 0; width: 1px; height: 24px; pointer-events: none; }
 .bar {
+  --ease: cubic-bezier(.2,.7,.2,1);
+  --glass: color-mix(in srgb, var(--field) 86%, transparent);
+  --glass-menu: color-mix(in srgb, var(--field) 92%, transparent);
+  --rim: color-mix(in srgb, var(--field-ink) 14%, transparent);
+  position: sticky; top: 0; z-index: 50;
+  height: 64px;
   background: var(--field);
   color: var(--field-ink);
+  transition: background-color .3s ease;
 }
 .bar .wrap {
+  position: relative; isolation: isolate;
   display: flex; align-items: center; gap: 28px;
-  min-height: 64px;
+  height: 64px;
+  transition: max-width .3s var(--ease), height .3s var(--ease), padding .3s var(--ease), transform .3s var(--ease);
+}
+/* ピルの面。中のメニューにもぼかしを効かせるため、.wrap ではなく疑似要素に付ける */
+.bar .wrap::before {
+  content: ""; position: absolute; inset: 0; z-index: -1;
+  border-radius: 0; border: 1px solid transparent;
+  background: var(--field);
+  transition: border-radius .3s var(--ease), background-color .3s ease, border-color .3s ease;
+}
+.bar.float { background: transparent; }
+.bar.float .wrap {
+  max-width: min(960px, calc(100% - 24px));
+  height: 52px; padding: 0 6px 0 20px;
+  transform: translateY(8px);
+}
+.bar.float .wrap::before {
+  border-radius: 999px; border-color: var(--rim);
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  backdrop-filter: blur(16px) saturate(1.4);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .bar { --glass: var(--field); --glass-menu: var(--field); }
 }
 .mark {
   display: flex; align-items: center; gap: 10px;
@@ -172,10 +205,73 @@ p { margin: 0; }
 }
 .mark img { width: 30px; height: 30px; }
 .bar nav { display: flex; gap: 24px; font-size: 15px; }
-.bar nav a { text-decoration: none; color: var(--field-ink-2); }
+.bar nav a { text-decoration: none; color: var(--field-ink-2); transition: color .15s ease; }
 .bar nav a:hover { color: var(--field-ink); }
-@media (max-width: 960px) { .bar nav { display: none; } }
 .mark, .bar nav a, .btn { white-space: nowrap; }
+
+/* メニューボタン（960px 以下だけ） */
+.menu-btn {
+  display: none; flex: none;
+  width: 40px; height: 40px; padding: 0; margin: 0;
+  border: 0; border-radius: 999px; cursor: pointer;
+  background: color-mix(in srgb, var(--field-ink) 10%, transparent);
+  color: var(--field-ink);
+  transition: background-color .15s ease;
+}
+.menu-btn:hover { background: color-mix(in srgb, var(--field-ink) 18%, transparent); }
+.menu-btn span {
+  display: block; width: 18px; height: 2px; margin: 0 auto; border-radius: 1px;
+  background: currentColor;
+  transition: transform .25s var(--ease), opacity .2s ease;
+}
+.menu-btn span + span { margin-top: 4px; }
+.bar.open .menu-btn span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+.bar.open .menu-btn span:nth-child(2) { opacity: 0; }
+.bar.open .menu-btn span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+
+@media (max-width: 960px) {
+  .bar .wrap { gap: 10px; }
+  .bar nav { display: none; }
+  .js .menu-btn { display: block; }
+  /* 同じ nav を、ヘッダーの下に出るパネルとして使う */
+  .js .bar nav {
+    display: grid; gap: 0;
+    position: absolute; top: calc(100% + 8px); left: 12px; right: 12px;
+    padding: 12px; border-radius: 28px;
+    border: 1px solid var(--rim);
+    background: var(--glass-menu);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    backdrop-filter: blur(16px) saturate(1.4);
+    font-size: 19px;
+    visibility: hidden; opacity: 0; transform: translateY(-8px);
+    transform-origin: top;
+    transition: opacity .15s ease, transform .15s ease, visibility 0s linear .15s;
+  }
+  .js .bar.float nav { left: 0; right: 0; }
+  .js .bar nav a {
+    display: flex; align-items: center; min-height: 52px; padding: 0 16px; border-radius: 16px;
+    color: var(--field-ink);
+    font-family: var(--font-display); font-weight: 700; letter-spacing: 0;
+    opacity: 0; transform: translateY(-4px);
+    transition: opacity .15s ease, transform .15s ease, background-color .15s ease;
+  }
+  .js .bar nav a:hover { background: color-mix(in srgb, var(--field-ink) 10%, transparent); }
+  .js .bar.open nav {
+    visibility: visible; opacity: 1; transform: none;
+    transition: opacity .2s ease, transform .2s var(--ease), visibility 0s;
+  }
+  .js .bar.open nav a {
+    opacity: 1; transform: none;
+    transition: opacity .2s ease calc(var(--i, 0) * 30ms), transform .25s var(--ease) calc(var(--i, 0) * 30ms), background-color .15s ease;
+  }
+}
+@media (max-width: 400px) {
+  .bar.float .wrap { padding-left: 14px; }
+  .mark { font-size: 16px; gap: 8px; }
+  .mark img { width: 26px; height: 26px; }
+  .bar .btn.sm { padding: 0 14px; font-size: 14px; }
+}
+@media (max-width: 359px) { .mark span { display: none; } }
 
 /* ---------- buttons ---------- */
 .btn {
@@ -359,13 +455,31 @@ table.presets { margin-top: 28px; border-collapse: collapse; width: 100%; max-wi
   background: var(--field); color: var(--field-ink);
   padding: var(--section) 0;
 }
-.install .wrap { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 40px clamp(32px, 6vw, 96px); }
-@media (max-width: 860px) { .install .wrap { grid-template-columns: 1fr; } }
 .install h2 { color: #fff; }
-.install .cta { margin-top: 28px; }
-.install ol { margin: 0; padding-left: 1.4em; font-size: 18px; }
-.install ol li + li { margin-top: 18px; }
+.install .lead { margin-top: 20px; max-width: 32em; }
+.ways {
+  margin-top: clamp(36px, 5vw, 56px);
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px;
+}
+@media (max-width: 860px) { .ways { grid-template-columns: 1fr; } }
+.way {
+  display: flex; flex-direction: column;
+  background: color-mix(in srgb, var(--field-ink) 6%, var(--field));
+  border-radius: 20px;
+  padding: clamp(24px, 3.2vw, 40px);
+}
+.way h3 { color: #fff; font-size: clamp(20px, 2vw, 24px); }
+.way > p { margin-top: 12px; font-size: 16px; }
+.install .cta { margin-top: 24px; }
+.install .ver { margin-top: 12px; }
+.install ol { margin: 28px 0 0; padding-left: 1.4em; font-size: 16px; }
+.install ol li + li { margin-top: 12px; }
 .install ol li::marker { font-family: var(--font-display); font-weight: 800; color: var(--sim); }
+.btn.outline {
+  background: transparent; color: var(--field-ink);
+  border: 2px solid color-mix(in srgb, var(--field-ink) 40%, transparent);
+}
+.btn.outline:hover { background: color-mix(in srgb, var(--field-ink) 10%, transparent); }
 .install .small { color: var(--field-ink-2); margin-top: 28px; }
 
 /* ---------- faq ---------- */
@@ -393,12 +507,13 @@ details p + p { margin-top: -10px; }
 footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64px, 9vw, 120px) 0 40px; }
 .big {
   font-family: var(--font-display); font-weight: 800; color: #fff;
-  font-size: clamp(40px, 10vw, 136px); line-height: .95; white-space: nowrap; letter-spacing: -0.04em;
+  font-size: clamp(34px, 10vw, 136px); line-height: .95; white-space: nowrap; letter-spacing: -0.04em;
   margin: 0 0 clamp(36px, 5vw, 64px);
 }
 .foot { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 28px clamp(32px, 5vw, 72px); font-size: 14px; line-height: 1.8; }
 .foot a { color: var(--field-ink); }
 .foot ul { list-style: none; padding: 0; margin: 0; }
+.foot .gh svg { display: inline-block; width: 18px; height: 18px; margin-right: 8px; vertical-align: -4px; }
 
 /* ---------- entrance (only when JS runs) ---------- */
 .js .rv { opacity: 0; transform: translateY(24px); }
@@ -417,16 +532,18 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
 </head>
 <body>
 
+<div class="top" data-top aria-hidden="true"></div>
 <header class="bar">
   <div class="wrap">
-    <a class="mark" href="./"><img src="icon.svg" alt="" width="30" height="30">povo Manager</a>
-    <nav aria-label="ページ内">
-      <a href="#calc">残り日数</a>
-      <a href="#features">できること</a>
-      <a href="#install">インストール</a>
-      <a href="#faq">質問</a>
+    <a class="mark" href="./"><img src="icon.svg" alt="" width="30" height="30"><span>povo Manager</span></a>
+    <nav id="menu" aria-label="ページ内">
+      <a href="#calc" style="--i:0">残り日数</a>
+      <a href="#features" style="--i:1">できること</a>
+      <a href="#install" style="--i:2">インストール</a>
+      <a href="#faq" style="--i:3">質問</a>
     </nav>
     <a class="btn sm" data-dl href="https://github.com/Fuku856/povo-manager/releases/latest">ダウンロード</a>
+    <button class="menu-btn" type="button" aria-expanded="false" aria-controls="menu" aria-label="メニュー"><span></span><span></span><span></span></button>
   </div>
 </header>
 
@@ -571,21 +688,36 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
 
 <section class="install" id="install" aria-labelledby="install-h">
   <div class="wrap">
-    <div>
-      <h2 id="install-h">インストール</h2>
-      <div class="cta">
-        <a class="btn" data-dl href="https://github.com/Fuku856/povo-manager/releases/latest">APKをダウンロード</a>
+    <h2 id="install-h">インストール</h2>
+    <p class="lead">Google Play ストアでは配布していません。APKを直接入れるか、Obtainium を使って更新まで任せるかを選べます。</p>
+    <div class="ways">
+      <div class="way rv">
+        <h3>APKを直接入れる</h3>
+        <p>いちばん手軽な方法です。新しい版が出たときは、このページからもう一度入れ直してください。</p>
+        <div class="cta">
+          <a class="btn" data-dl href="https://github.com/Fuku856/povo-manager/releases/latest">APKをダウンロード</a>
+        </div>
+        <p class="ver" data-ver>無料。Android 8.0 以降</p>
+        <ol>
+          <li>Android のスマートフォンで「APKをダウンロード」を押します。</li>
+          <li>ダウンロードしたファイルを開きます。「この提供元のアプリを許可」と出たら、ブラウザに許可を出してください。</li>
+          <li>「インストール」を押して、終わったらアプリを開きます。最初に通知の許可を求められるので、許可してください。</li>
+        </ol>
       </div>
-      <p class="ver" data-ver style="margin-top:14px">無料。Android 8.0 以降</p>
+      <div class="way rv" style="--d:80ms">
+        <h3>Obtainium で自動更新</h3>
+        <p><a href="https://obtainium.imranr.dev/">Obtainium</a> は、GitHub で配布されているアプリの新しい版を見つけてくれるアプリです。povo Manager を登録しておくと、新しい版が出たときに通知が来て、そのまま更新できます。</p>
+        <div class="cta">
+          <a class="btn outline" href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22com.fuku856.povomanager%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2FFuku856%2Fpovo-manager%22%2C%22author%22%3A%22Fuku856%22%2C%22name%22%3A%22povo%20Manager%22%7D">Obtainium に追加</a>
+        </div>
+        <ol>
+          <li>スマートフォンに Obtainium を入れておきます。</li>
+          <li>「Obtainium に追加」を押します。Obtainium が開いて登録の確認が出るので、追加してください。</li>
+          <li>Obtainium の画面から povo Manager をインストールします。次からは、新しい版が出ると通知が来ます。</li>
+        </ol>
+      </div>
     </div>
-    <div>
-      <ol>
-        <li>Android のスマートフォンで、このページの「APKをダウンロード」を押します。</li>
-        <li>ダウンロードしたファイルを開きます。「この提供元のアプリを許可」と出たら、ブラウザに許可を出してください。</li>
-        <li>「インストール」を押して、終わったらアプリを開きます。最初に通知の許可を求められるので、許可してください。</li>
-      </ol>
-      <p class="small">Google Play ストアでは配布していません。ファイルは <a href="https://github.com/Fuku856/povo-manager/releases">GitHub の Releases</a> に置いてあり、GitHub Actions がソースコードからビルドしたものです。</p>
-    </div>
+    <p class="small">ファイルは <a href="https://github.com/Fuku856/povo-manager/releases">GitHub の Releases</a> に置いてあり、GitHub Actions がソースコードからビルドしたものです。</p>
   </div>
 </section>
 
@@ -624,7 +756,7 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
     <p class="big">povo Manager</p>
     <div class="foot">
       <ul>
-        <li><a href="https://github.com/Fuku856/povo-manager">ソースコード（GitHub）</a></li>
+        <li><a class="gh" href="https://github.com/Fuku856/povo-manager"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M6.766 11.328c-2.063-.25-3.516-1.734-3.516-3.656 0-.781.281-1.625.75-2.188-.203-.515-.172-1.609.063-2.062.625-.078 1.468.25 1.968.703.594-.187 1.219-.281 1.985-.281.765 0 1.39.094 1.953.265.484-.437 1.344-.765 1.969-.687.218.422.25 1.515.046 2.047.5.593.766 1.39.766 2.203 0 1.922-1.453 3.375-3.547 3.64.531.344.89 1.094.89 1.954v1.625c0 .468.391.734.86.547C13.781 14.359 16 11.53 16 8.03 16 3.61 12.406 0 7.984 0 3.563 0 0 3.61 0 8.031a7.88 7.88 0 0 0 5.172 7.422c.422.156.828-.125.828-.547v-1.25c-.219.094-.5.156-.75.156-1.031 0-1.64-.562-2.078-1.609-.172-.422-.36-.672-.719-.719-.187-.015-.25-.093-.25-.187 0-.188.313-.328.625-.328.453 0 .844.281 1.25.86.313.452.64.655 1.031.655s.641-.14 1-.5c.266-.265.47-.5.657-.656"/></svg>ソースコード</a></li>
         <li><a href="https://github.com/Fuku856/povo-manager/releases">リリース一覧</a></li>
         <li><a href="https://github.com/Fuku856/povo-manager/blob/main/LICENSE">MIT License</a></li>
       </ul>
@@ -681,12 +813,12 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
   render();
 
   // --- ダウンロード: 最新リリースの APK に直リンクする（失敗したら Releases ページのまま） ---
-  var KEY = "povo-latest-release";
+  var KEY = "povo-latest-release-v2";
   function apply(r) {
     if (!r || !r.url) return;
     document.querySelectorAll("[data-dl]").forEach(function (a) { a.href = r.url; });
     document.querySelectorAll("[data-ver]").forEach(function (p) {
-      p.textContent = r.tag + "（" + r.date + "公開）。無料、Android 8.0 以降で使えます。";
+      p.textContent = r.tag + "。無料、Android 8.0 以降で使えます。";
     });
   }
   var cached = null;
@@ -699,17 +831,37 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
         if (!j || !j.assets) return;
         var apk = j.assets.filter(function (a) { return /\.apk$/i.test(a.name); })[0];
         if (!apk) return;
-        var d = new Date(j.published_at);
-        var r = { url: apk.browser_download_url, tag: j.tag_name, date: d.getFullYear() + "年" + (d.getMonth() + 1) + "月" + d.getDate() + "日" };
+        var r = { url: apk.browser_download_url, tag: j.tag_name };
         try { sessionStorage.setItem(KEY, JSON.stringify(r)); } catch (e) {}
         apply(r);
       })
       .catch(function () {});
   }
 
+  // --- ヘッダー: 960px 以下ではメニューを開け閉めする ---
+  var head = document.querySelector(".bar");
+  var menuBtn = head.querySelector(".menu-btn");
+  function setMenu(open) {
+    head.classList.toggle("open", open);
+    menuBtn.setAttribute("aria-expanded", String(open));
+  }
+  menuBtn.addEventListener("click", function () { setMenu(!head.classList.contains("open")); });
+  head.querySelectorAll("nav a").forEach(function (a) { a.addEventListener("click", function () { setMenu(false); }); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && head.classList.contains("open")) { setMenu(false); menuBtn.focus(); }
+  });
+  document.addEventListener("click", function (e) { if (!head.contains(e.target)) setMenu(false); });
+  var wide = window.matchMedia("(min-width: 961px)");
+  if (wide.addEventListener) wide.addEventListener("change", function () { setMenu(false); });
+
   // --- 表示されたら順に出す ---
   var items = document.querySelectorAll(".rv");
   if (!("IntersectionObserver" in window)) { items.forEach(function (el) { el.classList.add("in"); }); return; }
+
+  // --- ヘッダー: 最上部を離れたらピルにする ---
+  new IntersectionObserver(function (entries) {
+    head.classList.toggle("float", !entries[0].isIntersecting);
+  }).observe(document.querySelector("[data-top]"));
   var io = new IntersectionObserver(function (entries) {
     entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } });
   }, { rootMargin: "0px 0px -8% 0px" });
