@@ -6,7 +6,8 @@
 <title>povo Manager｜povo の自動解約日（180日）を管理して通知するAndroidアプリ</title>
 <meta name="description" content="povo 2.0 の最後のトッピング購入日から180日後の自動解約日を回線ごとに計算して、期限が近づいたら通知するAndroidアプリです。複数回線の残り日数を一覧とウィジェットで確認できます。無料、オープンソース。">
 <link rel="canonical" href="https://fuku856.github.io/povo-manager/">
-<meta name="theme-color" content="#1A1C1E">
+<meta name="theme-color" content="#E6EAEC" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1A1C1E" media="(prefers-color-scheme: dark)">
 <meta name="google-site-verification" content="o3FXCJZ8_DZ-7kAIgG9BwVnIU5pmXMnuvrbn73j_LV4" />
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 
@@ -83,9 +84,13 @@
   --ink-2: #4c5359;
   --accent: #00658e;
   --on-accent: #ffffff;
-  --field: #1a1c1e;
-  --field-ink: #e8eaec;
-  --field-ink-2: #a9b1b8;
+  /* ヒーロー、インストール、フッターの面。ライトでは明るいグレー、ダークではアイコンの背景色 */
+  --field: #e6eaec;
+  --field-ink: #1a1c1e;
+  --field-ink-2: #4c5359;
+  --field-head: #1a1c1e;
+  --field-raise: #fafbfb;
+  --frame: #1a1c1e;
   --sim: #4fc3f7;
 
   --safe-bg: #d7f2dc;  --safe-fg: #1b5e2a;
@@ -110,6 +115,10 @@
     --accent: #85cfff;
     --on-accent: #00344c;
     --field: #1a1c1e;
+    --field-ink: #e8eaec;
+    --field-ink-2: #a9b1b8;
+    --field-head: #fff;
+    --field-raise: #232628;
     --safe-bg: #1b3a22;  --safe-fg: #8bd99b;
     --warn-bg: #453a14;  --warn-fg: #f0ce63;
     --alert-bg: #4a3115; --alert-fg: #f2b26b;
@@ -118,7 +127,7 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; scroll-padding-top: 88px; }
+html { -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; scroll-padding-top: 88px; }
 body {
   margin: 0;
   background: var(--ground);
@@ -160,7 +169,7 @@ p { margin: 0; }
 .top { position: absolute; top: 0; left: 0; width: 1px; height: 24px; pointer-events: none; }
 .bar {
   --ease: cubic-bezier(.2,.7,.2,1);
-  --glass: color-mix(in srgb, var(--field) 86%, transparent);
+  --glass: color-mix(in srgb, var(--field) 64%, transparent);
   --glass-menu: color-mix(in srgb, var(--field) 92%, transparent);
   --rim: color-mix(in srgb, var(--field-ink) 14%, transparent);
   position: sticky; top: 0; z-index: 50;
@@ -191,8 +200,8 @@ p { margin: 0; }
 .bar.float .wrap::before {
   border-radius: 999px; border-color: var(--rim);
   background: var(--glass);
-  -webkit-backdrop-filter: blur(16px) saturate(1.4);
-  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.6);
+  backdrop-filter: blur(12px) saturate(1.6);
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .bar { --glass: var(--field); --glass-menu: var(--field); }
@@ -206,7 +215,7 @@ p { margin: 0; }
 .mark img { width: 30px; height: 30px; }
 .bar nav { display: flex; gap: 24px; font-size: 15px; }
 .bar nav a { text-decoration: none; color: var(--field-ink-2); transition: color .15s ease; }
-.bar nav a:hover { color: var(--field-ink); }
+.bar nav a:hover, .bar.float nav a { color: var(--field-ink); }
 .mark, .bar nav a, .btn { white-space: nowrap; }
 
 /* メニューボタン（960px 以下だけ） */
@@ -303,7 +312,7 @@ p { margin: 0; }
   align-items: center;
 }
 @media (max-width: 860px) { .hero .wrap { grid-template-columns: 1fr; } }
-.hero h1 { color: #fff; max-width: 11em; }
+.hero h1 { color: var(--field-head); max-width: 11em; }
 .lede {
   margin-top: 28px; max-width: 30em;
   font-size: clamp(17px, 1.6vw, 20px); color: var(--field-ink);
@@ -376,7 +385,7 @@ p { margin: 0; }
 .phone {
   margin: 0; max-width: 340px;
   border-radius: 34px; padding: 10px;
-  background: var(--field);
+  background: var(--frame);
 }
 .phone img { border-radius: 26px; width: 100%; }
 .phone.wide { max-width: 520px; border-radius: 30px; }
@@ -455,7 +464,7 @@ table.presets { margin-top: 28px; border-collapse: collapse; width: 100%; max-wi
   background: var(--field); color: var(--field-ink);
   padding: var(--section) 0;
 }
-.install h2 { color: #fff; }
+.install h2 { color: var(--field-head); }
 .install .lead { margin-top: 20px; max-width: 32em; }
 .ways {
   margin-top: clamp(36px, 5vw, 56px);
@@ -464,17 +473,14 @@ table.presets { margin-top: 28px; border-collapse: collapse; width: 100%; max-wi
 @media (max-width: 860px) { .ways { grid-template-columns: 1fr; } }
 .way {
   display: flex; flex-direction: column;
-  background: color-mix(in srgb, var(--field-ink) 6%, var(--field));
+  background: var(--field-raise);
   border-radius: 20px;
   padding: clamp(24px, 3.2vw, 40px);
 }
-.way h3 { color: #fff; font-size: clamp(20px, 2vw, 24px); }
+.way h3 { color: var(--field-head); font-size: clamp(20px, 2vw, 24px); }
 .way > p { margin-top: 12px; font-size: 16px; }
 .install .cta { margin-top: 24px; }
 .install .ver { margin-top: 12px; }
-.install ol { margin: 28px 0 0; padding-left: 1.4em; font-size: 16px; }
-.install ol li + li { margin-top: 12px; }
-.install ol li::marker { font-family: var(--font-display); font-weight: 800; color: var(--sim); }
 .btn.outline {
   background: transparent; color: var(--field-ink);
   border: 2px solid color-mix(in srgb, var(--field-ink) 40%, transparent);
@@ -501,22 +507,36 @@ summary::after {
 }
 details[open] summary::after { transform: translateY(-50%) rotate(45deg); }
 details p { padding: 0 0 22px; font-size: 16px; }
+/* 開け閉めで高さをなめらかに変える（対応していないブラウザではすぐ開く） */
+@supports (interpolate-size: allow-keywords) {
+  details { interpolate-size: allow-keywords; }
+  details::details-content {
+    block-size: 0; overflow: hidden; opacity: 0;
+    transition: block-size .3s cubic-bezier(.2,.7,.2,1), opacity .25s ease, content-visibility .3s allow-discrete;
+  }
+  details[open]::details-content { block-size: auto; opacity: 1; }
+}
 details p + p { margin-top: -10px; }
 
 /* ---------- footer ---------- */
 footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64px, 9vw, 120px) 0 40px; }
 .big {
-  font-family: var(--font-display); font-weight: 800; color: #fff;
+  font-family: var(--font-display); font-weight: 800; color: var(--field-head);
   font-size: clamp(28px, 5vw, 64px); line-height: 1; white-space: nowrap; letter-spacing: -0.02em;
   margin: 0 0 clamp(28px, 4vw, 48px);
-  display: flex; align-items: baseline; gap: .2em;
+  display: flex; align-items: center; gap: .25em;
 }
-/* アイコンの SIM カードの部分だけを切り出して、文字の高さにそろえる */
-.big svg { flex: none; height: .72em; width: auto; }
+/* p・g の下に伸びる部分まで含めた文字全体の真ん中に合わせる */
+.big img { flex: none; width: 1em; height: 1em; transform: translateY(.13em); }
+/* ダークではアイコンの背景がフッターと同じ色になるので、淡い縁で角丸の形を見せる */
+@media (prefers-color-scheme: dark) {
+  .big img { border-radius: 22%; box-shadow: 0 0 0 1px color-mix(in srgb, var(--field-ink) 22%, transparent); }
+}
 .foot { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 28px clamp(32px, 5vw, 72px); font-size: 14px; line-height: 1.8; }
 .foot a { color: var(--field-ink); }
-.foot ul { list-style: none; padding: 0; margin: 0; }
-.foot .gh svg { display: inline-block; width: 18px; height: 18px; margin-right: 8px; vertical-align: -4px; }
+/* ロゴを左にはみ出させて、どの行も「ソースコード」の文字の位置にそろえる */
+.foot ul { list-style: none; padding: 0 0 0 26px; margin: 0; }
+.foot .gh svg { display: inline-block; width: 18px; height: 18px; margin: 0 8px 0 -26px; vertical-align: -4px; }
 
 /* ---------- entrance (only when JS runs) ---------- */
 .js .rv { opacity: 0; transform: translateY(24px); }
@@ -557,11 +577,12 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
       <h1>povo の<wbr>自動解約日を<wbr>管理する<wbr>アプリ</h1>
       <p class="lede">最後にトッピングを買った日から180日。povo Manager は回線ごとに残り日数を出して、期限が近づいたら通知します。</p>
       <div class="cta">
+        <!-- ダウンロードのアイコン: Reicon (https://reicon.dev, MIT)。元は Solar Icons (480 Design, CC BY 4.0) -->
         <a class="btn" data-dl href="https://github.com/Fuku856/povo-manager/releases/latest">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 1.25C12.4142 1.25 12.75 1.58579 12.75 2V12.9726L14.4306 11.0119C14.7001 10.6974 15.1736 10.661 15.4881 10.9306C15.8026 11.2001 15.839 11.6736 15.5694 11.9881L12.5694 15.4881C12.427 15.6543 12.2189 15.75 12 15.75C11.7811 15.75 11.573 15.6543 11.4306 15.4881L8.43056 11.9881C8.16099 11.6736 8.19741 11.2001 8.51191 10.9306C8.8264 10.661 9.29988 10.6974 9.56944 11.0119L11.25 12.9726V2C11.25 1.58579 11.5858 1.25 12 1.25ZM6.99583 8.25196C7.41003 8.24966 7.74768 8.58357 7.74999 8.99778C7.7523 9.41199 7.41838 9.74964 7.00418 9.75194C5.91068 9.75803 5.1356 9.78643 4.54735 9.89448C3.98054 9.99859 3.65246 10.1658 3.40901 10.4092C3.13225 10.686 2.9518 11.0746 2.85315 11.8083C2.75159 12.5637 2.75 13.5648 2.75 15.0002V16.0002C2.75 17.4356 2.75159 18.4367 2.85315 19.1921C2.9518 19.9259 3.13225 20.3144 3.40901 20.5912C3.68577 20.868 4.07435 21.0484 4.80812 21.1471C5.56347 21.2486 6.56458 21.2502 8 21.2502H16C17.4354 21.2502 18.4365 21.2486 19.1919 21.1471C19.9257 21.0484 20.3142 20.868 20.591 20.5912C20.8678 20.3144 21.0482 19.9259 21.1469 19.1921C21.2484 18.4367 21.25 17.4356 21.25 16.0002V15.0002C21.25 13.5648 21.2484 12.5637 21.1469 11.8083C21.0482 11.0746 20.8678 10.686 20.591 10.4092C20.3475 10.1658 20.0195 9.99859 19.4527 9.89448C18.8644 9.78643 18.0893 9.75803 16.9958 9.75194C16.5816 9.74964 16.2477 9.41199 16.25 8.99778C16.2523 8.58357 16.59 8.24966 17.0042 8.25196C18.0857 8.25799 18.9871 8.28387 19.7236 8.41916C20.4816 8.55839 21.1267 8.82364 21.6517 9.34857C22.2536 9.95048 22.5125 10.7084 22.6335 11.6085C22.75 12.4754 22.75 13.5778 22.75 14.9453V16.0551C22.75 17.4227 22.75 18.525 22.6335 19.392C22.5125 20.2921 22.2536 21.0499 21.6517 21.6519C21.0497 22.2538 20.2919 22.5127 19.3918 22.6337C18.5248 22.7503 17.4225 22.7502 16.0549 22.7502H7.94513C6.57754 22.7502 5.47522 22.7503 4.60825 22.6337C3.70814 22.5127 2.95027 22.2538 2.34835 21.6519C1.74643 21.0499 1.48754 20.2921 1.36652 19.392C1.24996 18.525 1.24998 17.4227 1.25 16.0551V14.9453C1.24998 13.5778 1.24996 12.4754 1.36652 11.6085C1.48754 10.7084 1.74643 9.95048 2.34835 9.34857C2.87328 8.82363 3.51835 8.55839 4.27635 8.41916C5.01291 8.28387 5.9143 8.25798 6.99583 8.25196Z" fill="currentColor"/></svg>
           APKをダウンロード
         </a>
-        <p class="ver" data-ver>無料。Android 8.0 以降</p>
+        <p class="ver" data-ver>Android 8.0 以降</p>
       </div>
     </div>
 
@@ -700,24 +721,14 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
         <div class="cta">
           <a class="btn" data-dl href="https://github.com/Fuku856/povo-manager/releases/latest">APKをダウンロード</a>
         </div>
-        <p class="ver" data-ver>無料。Android 8.0 以降</p>
-        <ol>
-          <li>Android のスマートフォンで「APKをダウンロード」を押します。</li>
-          <li>ダウンロードしたファイルを開きます。「この提供元のアプリを許可」と出たら、ブラウザに許可を出してください。</li>
-          <li>「インストール」を押して、終わったらアプリを開きます。最初に通知の許可を求められるので、許可してください。</li>
-        </ol>
+        <p class="ver" data-ver>Android 8.0 以降</p>
       </div>
       <div class="way rv" style="--d:80ms">
         <h3>Obtainium で自動更新</h3>
-        <p><a href="https://obtainium.imranr.dev/">Obtainium</a> は、GitHub で配布されているアプリの新しい版を見つけてくれるアプリです。povo Manager を登録しておくと、新しい版が出たときに通知が来て、そのまま更新できます。</p>
+        <p><a href="https://obtainium.imranr.dev/">Obtainium</a> に登録しておくと、新しい版が出たときに通知が来て、そのまま更新できます。</p>
         <div class="cta">
           <a class="btn outline" href="https://apps.obtainium.imranr.dev/redirect?r=obtainium://app/%7B%22id%22%3A%22com.fuku856.povomanager%22%2C%22url%22%3A%22https%3A%2F%2Fgithub.com%2FFuku856%2Fpovo-manager%22%2C%22author%22%3A%22Fuku856%22%2C%22name%22%3A%22povo%20Manager%22%7D">Obtainium に追加</a>
         </div>
-        <ol>
-          <li>スマートフォンに Obtainium を入れておきます。</li>
-          <li>「Obtainium に追加」を押します。Obtainium が開いて登録の確認が出るので、追加してください。</li>
-          <li>Obtainium の画面から povo Manager をインストールします。次からは、新しい版が出ると通知が来ます。</li>
-        </ol>
       </div>
     </div>
     <p class="small">ファイルは <a href="https://github.com/Fuku856/povo-manager/releases">GitHub の Releases</a> に置いてあり、GitHub Actions がソースコードからビルドしたものです。</p>
@@ -756,7 +767,7 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
 
 <footer>
   <div class="wrap">
-    <p class="big"><svg viewBox="30 18 48 78" aria-hidden="true"><path fill="#4FC3F7" d="M30,18 L66,18 L78,30 L78,90 A6,6 0 0 1 72,96 L36,96 A6,6 0 0 1 30,90 Z"/><path fill="#1A1C1E" d="M42,54 L51,63 L68,46 L72,50 L51,71 L38,58 Z"/></svg>povo Manager</p>
+    <p class="big"><img src="icon.svg" alt="" width="64" height="64">povo Manager</p>
     <div class="foot">
       <ul>
         <li><a class="gh" href="https://github.com/Fuku856/povo-manager"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M6.766 11.328c-2.063-.25-3.516-1.734-3.516-3.656 0-.781.281-1.625.75-2.188-.203-.515-.172-1.609.063-2.062.625-.078 1.468.25 1.968.703.594-.187 1.219-.281 1.985-.281.765 0 1.39.094 1.953.265.484-.437 1.344-.765 1.969-.687.218.422.25 1.515.046 2.047.5.593.766 1.39.766 2.203 0 1.922-1.453 3.375-3.547 3.64.531.344.89 1.094.89 1.954v1.625c0 .468.391.734.86.547C13.781 14.359 16 11.53 16 8.03 16 3.61 12.406 0 7.984 0 3.563 0 0 3.61 0 8.031a7.88 7.88 0 0 0 5.172 7.422c.422.156.828-.125.828-.547v-1.25c-.219.094-.5.156-.75.156-1.031 0-1.64-.562-2.078-1.609-.172-.422-.36-.672-.719-.719-.187-.015-.25-.093-.25-.187 0-.188.313-.328.625-.328.453 0 .844.281 1.25.86.313.452.64.655 1.031.655s.641-.14 1-.5c.266-.265.47-.5.657-.656"/></svg>ソースコード</a></li>
@@ -764,7 +775,6 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
         <li><a href="https://github.com/Fuku856/povo-manager/blob/main/LICENSE">MIT License</a></li>
       </ul>
       <p>povo Manager は個人が開発している非公式アプリです。povo は KDDI株式会社 の商標で、このアプリは povo および KDDI とは関係ありません。</p>
-      <p>ダウンロードのアイコンは <a href="https://reicon.dev">Reicon</a>（MIT）のもので、元は Solar Icons（480 Design、CC BY 4.0）です。</p>
     </div>
   </div>
 </footer>
@@ -822,7 +832,7 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
     if (!r || !r.url) return;
     document.querySelectorAll("[data-dl]").forEach(function (a) { a.href = r.url; });
     document.querySelectorAll("[data-ver]").forEach(function (p) {
-      p.textContent = r.tag + "。無料。Android 8.0 以降";
+      p.textContent = r.tag + "。Android 8.0 以降";
     });
   }
   var cached = null;
