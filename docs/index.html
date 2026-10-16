@@ -890,7 +890,8 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
         var apk = j.assets.filter(function (a) { return /\.apk$/i.test(a.name); })[0];
         if (!apk) return;
         var d = new Date(j.published_at);
-        var r = { url: apk.browser_download_url, tag: j.tag_name, date: d.getFullYear() + "年" + (d.getMonth() + 1) + "月" + d.getDate() + "日" };
+        var r = { url: apk.browser_download_url, tag: j.tag_name };
+        if (!isNaN(d)) r.date = d.getFullYear() + "年" + (d.getMonth() + 1) + "月" + d.getDate() + "日";
         try { sessionStorage.setItem(KEY, JSON.stringify(r)); } catch (e) {}
         apply(r);
       })
@@ -916,7 +917,9 @@ footer { background: var(--field); color: var(--field-ink-2); padding: clamp(64p
   // --- 最上部へ戻る: ロゴ、戻るボタン、PC では「残り日数」も（計算機がヒーローの横にあるため） ---
   var still = window.matchMedia("(prefers-reduced-motion: reduce)");
   function toTop(e) {
+    if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
     e.preventDefault();
+    setMenu(false);
     if (location.hash) history.replaceState(null, "", location.pathname + location.search);
     window.scrollTo({ top: 0, behavior: still.matches ? "auto" : "smooth" });
   }
